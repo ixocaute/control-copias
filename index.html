@@ -293,16 +293,17 @@
         document.getElementById('fecha-abono').value = hoy;
         document.getElementById('fecha-copia').value = hoy;
 
+        // Cargar alumnos o crearlos con los 28 nombres obligatorios
         let alumnos = JSON.parse(localStorage.getItem('control_copias_alumnos'));
         let historial = JSON.parse(localStorage.getItem('control_copias_historial')) || [];
 
-        if (!alumnos) {
+        if (!alumnos || alumnos.length === 0) {
             alumnos = nombresIniciales.map(nombre => ({
                 nombre: nombre,
                 abonado: 0,
                 copias: 0
             }));
-            guardarYActualizar();
+            localStorage.setItem('control_copias_alumnos', JSON.stringify(alumnos));
         }
 
         function guardarYActualizar() {
@@ -352,4 +353,145 @@
                     <td>${alumn.abonado.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
                     <td>${alumn.copias}</td>
                     <td>${gastado.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
-                    <td style="
+                    <td style="color: ${saldo < 0 ? '#ff6b6b' : '#10b981'}; font-weight: bold;">${saldo.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                    <td class="columna-acciones">
+                        <button class="btn-accion btn-editar" onclick="editarAlumno(${index})">✏️ Corregir</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderizarHistorial() {
+            const tbody = document.querySelector('#tabla-historial tbody');
+            tbody.innerHTML = '';
+
+            if (historial.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="color: #888;">No hay movimientos registrados todavía.</td></tr>`;
+                return;
+            }
+
+            [...historial].reverse().forEach((item, indexReal) => {
+                let realIdx = historial.length - 1 - indexReal;
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.fecha}</td>
+                    <td><span style="background: ${item.tipo === 'Abono' ? '#d1fae5' : '#ede9fe'}; padding: 3px 6px; border-radius: 4px; font-weight: bold;">${item.tipo}</span></td>
+                    <td style="font-weight: bold; text-align: left;">${item.detalle}</td>
+                    <td style="text-align: left; color: #555;">${item.descripcion || '(Sin descripción)'}</td>
+                    <td>${item.valor}</td>
+                    <td class="columna-borrar">
+                        <button class="btn-accion btn-borrar-historial" onclick="borrarMovimiento(${realIdx})">❌</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function registrarAbono() {
+            const index = document.getElementById('select-abono').value;
+            const fecha = document.getElementById('fecha-abono').value;
+            const monto = parseFloat(document.getElementById('input-abono').value);
+            const desc = document.getElementById('desc-abono').value.trim();
+
+            if (!fecha) { alert('Por favor seleccione una fecha.'); return; }
+            if (isNaN(monto) || monto <= 0) { alert('Por favor ingrese un monto válido.'); return; }
+
+            alumnos[index].abonado += monto;
+            historial.push({
+                fecha: fecha,
+                tipo: 'Abono',
+                detalle: alumnos[index].nombre,
+                descripcion: desc || 'Abono de dinero',
+                valor: `+${monto.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs`
+            });
+
+            document.getElementById('input-abono').value = '';
+            document.getElementById('desc-abono').value = '';
+            guardarYActualizar();
+            alert('¡Abono registrado con éxito! 🎉');
+        }
+
+        function registrarCopias() {
+            const tipo = document.getElementById('tipo-copia').value;
+            const fecha = document.getElementById('fecha-copia').value;
+            const cant = parseInt(document.getElementById('input-copia').value);
+            const desc = document.getElementById('desc-copia').value.trim();
+
+            if (!fecha) { alert('Por favor seleccione una fecha.'); return; }
+            if (isNaN(cant) || cant <= 0) { alert('Por favor ingrese una cantidad válida.'); return; }
+
+            if (tipo === 'individual') {
+                const index = document.getElementById('select-copia').value;
+                alumnos[index].copias += cant;
+                historial.push({
+                    fecha: fecha,
+                    tipo: 'Copia',
+                    detalle: alumnos[index].nombre,
+                    descripcion: desc || 'Copias individuales',
+                    valor: `${cant} copias`
+                });
+                alert(`¡Listo! Se sumaron ${cant} copias a ${alumnos[index].nombre}.`);
+            } else {
+                alumnos.forEach(alumn => {
+                    alumn.copias += cant;
+                });
+                historial.push({
+                    fecha: fecha,
+                    tipo: 'Masivo',
+                    detalle: 'TODOS LOS ALUMNOS (28)',
+                    descripcion: desc || 'Copia general para el salón',
+                    valor: `${cant} copias c/u`
+                });
+                alert(`¡Guau! Se sumaron ${cant} copias a los 28 alumnos al mismo tiempo.`);
+            }
+
+            document.getElementById('input-copia').value = '1';
+            document.getElementById('desc-copia').value = '';
+            guardarYActualizar();
+        }
+
+        function editarAlumno(index) {
+            let alumno = alumnos[index];
+            let nuevoAbono = prompt(`Corregir TOTAL ABONADO para ${alumno.nombre}:`, alumno.abonado);
+            if (nuevoAbono === null) return;
+            let nuevasCopias = prompt(`Corregir total de COPIAS SACADAS para ${alumno.nombre}:`, alumno.copias);
+            if (nuevasCopias === null) return;
+
+            let abonadoParsed = parseFloat(nuevoAbono);
+            let copiasParsed = parseInt(nuevasCopias);
+
+            if (isNaN(abonadoParsed) || isNaN(copiasParsed)) {
+                alert('Error: Por favor introduce números válidos.');
+                return;
+            }
+
+            alumnos[index].abonado = abonadoParsed;
+            alumnos[index].copias = copiasParsed;
+            guardarYActualizar();
+            alert(`¡Datos corregidos con éxito para ${alumno.nombre}! ✨`);
+        }
+
+        function borrarMovimiento(index) {
+            if (confirm('¿Estás seguro de eliminar este registro del historial?')) {
+                historial.splice(index, 1);
+                guardarYActualizar();
+            }
+        }
+
+        function reiniciarTodo() {
+            if (confirm('⚠️ ¿ESTÁS SEGURA? Esto borrará absolutamente todos los abonos, copias e historial, dejando la página limpia desde cero.')) {
+                if (confirm('Estás a punto de eliminar todos los datos de los 28 alumnos. ¿Confirmas esta acción?')) {
+                    localStorage.removeItem('control_copias_alumnos');
+                    localStorage.removeItem('control_copias_historial');
+                    location.reload();
+                }
+            }
+        }
+
+        inicializarSelects();
+        renderizarAlumnos();
+        renderizarHistorial();
+    </script>
+</body>
+</html>
