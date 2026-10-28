@@ -1,166 +1,290 @@
-import os
-import pandas as pd
-import streamlit as st
-
-DATA_FILE = "control_copias_datos.csv"
-COSTO_COPIA = 80
-
-
-def inicializar_datos():
-  if not os.path.exists(DATA_FILE):
-    nombres = [
-        "Alex Hernandez",
-        "Abraham Lopez",
-        "Sebastian Castillo",
-        "Mateo Rojas",
-        "Orlando Lopez",
-        "Yeraldo Minera",
-        "Jhosniell Rodriguez",
-        "Abel Bracho",
-        "Martin Perez",
-        "Luciano Sampallo",
-        "Ezequiel Amparan",
-        "Danyer Fernandez",
-        "Matias",
-        "Franyelis Sanchez",
-        "Hernalis Acoata",
-        "Deimar Acosta",
-        "Yoliexy Figueredo",
-        "Carmen Garrido",
-        "Greimar Rivero",
-        "Amura Pinto",
-        "Naismar Escobar",
-        "Nayhana Dominguez",
-        "Shaday Coronado",
-        "Eurimar Linarez",
-        "Jhoannys Chavez",
-        "Yeximar",
-        "Fabiana Tovar",
-        "Erika Miao",
-    ]
-    df = pd.DataFrame({
-        "Estudiante": nombres,
-        "Total Abonado": 0.0,
-        "Copias Sacadas": 0,
-    })
-    df.to_csv(DATA_FILE, index=False)
-
-
-inicializar_datos()
-
-# Configuración de página con toque divertido
-st.set_page_config(
-    page_title="Control de Copias - Salón de Clases 🍎✏️",
-    page_icon="🎨",
-    layout="centered",
-)
-
-# Estilos personalizados para un toque más infantil y colorido
-st.markdown("""
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Copias - Salón de Clases 🍎✏️</title>
     <style>
-    .main {
-        background-color: #fff9e6;
-    }
-    h1 {
-        color: #ff6b6b;
-        text-align: center;
-        font-family: 'Comic Sans MS', cursive, sans-serif;
-    }
-    .stButton>button {
-        background-color: #4ecdc4;
-        color: white;
-        font-weight: bold;
-        border-radius: 12px;
-        border: none;
-        padding: 10px 20px;
-    }
-    .stButton>button:hover {
-        background-color: #ff6b6b;
-        color: white;
-    }
+        body {
+            background-color: #fff9e6;
+            font-family: 'Comic Sans MS', cursive, sans-serif, Arial, sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #ff6b6b;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #4a90e2;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+        .acciones-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .panel {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px dashed #4ecdc4;
+        }
+        .panel h3 {
+            margin-top: 0;
+            color: #2b7a78;
+            font-size: 16px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 3px;
+            font-size: 13px;
+            color: #555;
+        }
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            background-color: #4ecdc4;
+            color: white;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+            transition: 0.2s;
+        }
+        button:hover {
+            background-color: #ff6b6b;
+        }
+        .btn-masivo {
+            background-color: #8b5cf6;
+        }
+        .btn-masivo:hover {
+            background-color: #7c3aed;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+        th {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        @media (max-width: 768px) {
+            .acciones-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
-    """, unsafe_allow_html=True)
+</head>
+<body>
+    <div class="container">
+        <h1>🍎✏️ ¡Control Mágico de Copias y Saldos! 🖍️📚</h1>
+        <p class="subtitle">¡Organizar el salón nunca fue tan divertido y fácil! (Costo por copia: 80 Bs)</p>
 
-st.title("🍎✏️ ¡Control Mágico de Copias y Saldos! 🖍️📚")
-st.markdown(
-    "<h3 style='text-align: center; color: #4a90e2; font-size: 18px;'>¡Organizar"
-    " el salón nunca fue tan divertido y fácil! (Costo por copia: 80 Bs)</h3>",
-    unsafe_allow_html=True,
-)
+        <div class="acciones-grid">
+            <!-- Panel Abono -->
+            <div class="panel">
+                <h3>💰 Registrar Abono</h3>
+                <div class="form-group">
+                    <label>Estudiante:</label>
+                    <select id="select-abono"></select>
+                </div>
+                <div class="form-group">
+                    <label>Monto (Bs):</label>
+                    <input type="number" id="input-abono" step="10" min="0" placeholder="Ej. 500">
+                </div>
+                <button onclick="registrarAbono()">🌟 Guardar Abono</button>
+            </div>
 
-st.write("")
+            <!-- Panel Copias Individuales -->
+            <div class="panel">
+                <h3>📄 Copias Individuales</h3>
+                <div class="form-group">
+                    <label>Estudiante:</label>
+                    <select id="select-copia"></select>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad:</label>
+                    <input type="number" id="input-copia" min="1" value="1">
+                </div>
+                <button onclick="registrarCopiasIndividuales()">🌟 Sumar Copias</button>
+            </div>
 
-# Cargar datos actuales
-df = pd.read_csv(DATA_FILE)
-df["Total Gastado (Bs)"] = df["Copias Sacadas"] * COSTO_COPIA
-df["Saldo Restante (Bs)"] = df["Total Abonado"] - df["Total Gastado (Bs)"]
+            <!-- Panel Masivo -->
+            <div class="panel">
+                <h3>🏫 Copia a Todo el Salón</h3>
+                <div class="form-group">
+                    <label>Copias para todos:</label>
+                    <input type="number" id="input-masivo" min="1" value="1">
+                </div>
+                <button class="btn-masivo" onclick="registrarCopiasMasivas()">🚀 Aplicar a Todos</button>
+            </div>
+        </div>
 
-# Mostrar tabla interactiva con diseño amigable
-st.dataframe(df, use_container_width=True)
+        <h3 style="margin-top: 25px; color: #4a90e2; text-align: center;">📋 Lista y Estado de Alumnos</h3>
+        <div style="overflow-x:auto;">
+            <table id="tabla-alumnos">
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">Estudiante</th>
+                        <th>Total Abonado</th>
+                        <th>Copias Sacadas</th>
+                        <th>Total Gastado</th>
+                        <th>Saldo Restante</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-st.divider()
-st.subheader("🎨 Panel de Acciones de la maestra")
+    <script>
+        const COSTO_COPIA = 80;
+        const nombresIniciales = [
+            "Alex Hernandez", "Abraham Lopez", "Sebastian Castillo", "Mateo Rojas",
+            "Orlando Lopez", "Yeraldo Minera", "Jhosniell Rodriguez", "Abel Bracho",
+            "Martin Perez", "Luciano Sampallo", "Ezequiel Amparan", "Danyer Fernandez",
+            "Matias", "Franyelis Sanchez", "Hernalis Acoata", "Deimar Acosta",
+            "Yoliexy Figueredo", "Carmen Garrido", "Greimar Rivero", "Amura Pinto",
+            "Naismar Escobar", "Nayhana Dominguez", "Shaday Coronado", "Eurimar Linarez",
+            "Jhoannys Chavez", "Yeximar", "Fabiana Tovar", "Erika Miao"
+        ];
 
-# Menú de acciones decorado
-accion = st.selectbox(
-    "⭐ ¿Qué vamos a hacer hoy?",
-    [
-        "💰 Registrar Abono de un alumno",
-        "📄 Sumar Copias a un alumno",
-        "🏫 ¡Copia Masiva para TODO el salón! 🎉",
-    ],
-)
+        let alumnos = JSON.parse(localStorage.getItem('control_copias_alumnos'));
 
-if accion == "💰 Registrar Abono de un alumno":
-  with st.form("form_abono"):
-    st.write("### 🪙 ¡Registrar un dinerito recibido!")
-    alumno = st.selectbox("👶 Selecciona al estudiante:", df["Estudiante"].tolist())
-    monto = st.number_input(
-        "💵 Monto del Abono (Bs):", min_value=0.0, step=10.0
-    )
-    submitted = st.form_submit_button("🌟 Guardar Abono")
-    if submitted:
-      df.loc[df["Estudiante"] == alumno, "Total Abonado"] += monto
-      df.drop(columns=["Total Gastado (Bs)", "Saldo Restante (Bs)"]).to_csv(
-          DATA_FILE, index=False
-      )
-      st.success(f"🎉 ¡Excelente! Abono de {monto} Bs registrado para {alumno}.")
-      st.rerun()
+        if (!alumnos) {
+            alumnos = nombresIniciales.map(nombre => ({
+                nombre: nombre,
+                abonado: 0,
+                copias: 0
+            }));
+            guardarYActualizar();
+        }
 
-elif accion == "📄 Sumar Copias a un alumno":
-  with st.form("form_copias"):
-    st.write("### 📋 ¡Anotar copias entregadas!")
-    alumno = st.selectbox("👶 Selecciona al estudiante:", df["Estudiante"].tolist())
-    cant = st.number_input(
-        "📄 Cantidad de copias:", min_value=1, step=1, value=1
-    )
-    submitted = st.form_submit_button("🌟 Registrar Copias")
-    if submitted:
-      df.loc[df["Estudiante"] == alumno, "Copias Sacadas"] += cant
-      df.drop(columns=["Total Gastado (Bs)", "Saldo Restante (Bs)"]).to_csv(
-          DATA_FILE, index=False
-      )
-      st.success(f"🎈 ¡Listo! Se sumaron {cant} copias a {alumno}.")
-      st.rerun()
+        function guardarYActualizar() {
+            localStorage.setItem('control_copias_alumnos', JSON.stringify(alumnos));
+            renderizar();
+        }
 
-elif accion == "🏫 ¡Copia Masiva para TODO el salón! 🎉":
-  with st.form("form_masivo"):
-    st.write("### 🚀 ¡Actividad para todos los amiguitos!")
-    cant = st.number_input(
-        "📚 ¿Cuántas copias sacó cada niño hoy?", min_value=1, step=1, value=1
-    )
-    submitted = st.form_submit_button("🌟 ¡Aplicar a Todo el Salón!")
-    if submitted:
-      df["Copias Sacadas"] += cant
-      df.drop(columns=["Total Gastado (Bs)", "Saldo Restante (Bs)"]).to_csv(
-          DATA_FILE, index=False
-      )
-      st.success(
-          f"🎨 ¡Guau! Se sumaron {cant} copias a los 28 alumnos al mismo tiempo."
-          " ¡Buen trabajo!"
-      )
-      st.rerun()
-          f"🎨 ¡Guau! Se sumaron {cant} copias a los 28 alumnos al mismo tiempo."
-          " ¡Buen trabajo!"
-      )
-      st.rerun()
+        function inicializarSelects() {
+            const selectAbono = document.getElementById('select-abono');
+            const selectCopia = document.getElementById('select-copia');
+            selectAbono.innerHTML = '';
+            selectCopia.innerHTML = '';
+
+            alumnos.forEach((alumn, index) => {
+                let opt1 = document.createElement('option');
+                opt1.value = index;
+                opt1.textContent = alumn.nombre;
+                selectAbono.appendChild(opt1);
+
+                let opt2 = document.createElement('option');
+                opt2.value = index;
+                opt2.textContent = alumn.nombre;
+                selectCopia.appendChild(opt2);
+            });
+        }
+
+        function renderizar() {
+            const tbody = document.querySelector('#tabla-alumnos tbody');
+            tbody.innerHTML = '';
+
+            alumnos.forEach(alumn => {
+                let gastado = alumn.copias * COSTO_COPIA;
+                let saldo = alumn.abonado - gastado;
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align: left; font-weight: bold;">${alumn.nombre}</td>
+                    <td>${alumn.abonado.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                    <td>${alumn.copias}</td>
+                    <td>${gastado.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                    <td style="color: ${saldo < 0 ? '#ff6b6b' : '#10b981'}; font-weight: bold;">${saldo.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function registrarAbono() {
+            const index = document.getElementById('select-abono').value;
+            const monto = parseFloat(document.getElementById('input-abono').value);
+            if (isNaN(monto) || monto <= 0) {
+                alert('Por favor ingrese un monto válido.');
+                return;
+            }
+            alumnos[index].abonado += monto;
+            document.getElementById('input-abono').value = '';
+            guardarYActualizar();
+            alert('¡Abono registrado con éxito! 🎉');
+        }
+
+        function registrarCopiasIndividuales() {
+            const index = document.getElementById('select-copia').value;
+            const cant = parseInt(document.getElementById('input-copia').value);
+            if (isNaN(cant) || cant <= 0) {
+                alert('Por favor ingrese una cantidad válida.');
+                return;
+            }
+            alumnos[index].copias += cant;
+            document.getElementById('input-copia').value = '1';
+            guardarYActualizar();
+            alert('¡Copias sumadas con éxito! 🎈');
+        }
+
+        function registrarCopiasMasivas() {
+            const cant = parseInt(document.getElementById('input-masivo').value);
+            if (isNaN(cant) || cant <= 0) {
+                alert('Por favor ingrese una cantidad válida para todos.');
+                return;
+            }
+            alumnos.forEach(alumn => {
+                alumn.copias += cant;
+            });
+            document.getElementById('input-masivo').value = '1';
+            guardarYActualizar();
+            alert(`¡Se han sumado ${cant} copias a los 28 alumnos exitosamente! 🚀`);
+        }
+
+        inicializarSelects();
+        renderizar();
+    </script>
+</body>
+</html>
