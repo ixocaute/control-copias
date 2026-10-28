@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Control de Copias - Salón de Clases 🍎✏️</title>
     <style>
         body {
@@ -10,14 +10,14 @@
             font-family: 'Comic Sans MS', cursive, sans-serif, Arial, sans-serif;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 10px; /* Reducido para aprovechar espacio en celular */
         }
         .container {
             max-width: 950px;
             margin: 0 auto;
             background: white;
-            padding: 25px;
-            border-radius: 20px;
+            padding: 15px; /* Padding más cómodo para móviles */
+            border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
         /* Banner de aviso para el modo de prueba */
@@ -26,35 +26,36 @@
             background-color: #fef08a;
             border: 2px dashed #facc15;
             color: #854d0e;
-            padding: 12px;
-            border-radius: 10px;
+            padding: 10px;
+            border-radius: 8px;
             text-align: center;
             font-weight: bold;
-            margin-bottom: 20px;
-            font-size: 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
         }
         /* Barra superior para cambiar de modo */
         .modo-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             background: #f8fafc;
-            padding: 10px 15px;
-            border-radius: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
         .indicador-estado {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             color: #059669;
         }
         .btn-modo {
             background-color: #8b5cf6;
             width: auto;
-            padding: 8px 15px;
-            font-size: 13px;
+            padding: 6px 12px;
+            font-size: 12px;
             margin-top: 0;
+            border-radius: 6px;
         }
         .btn-modo:hover {
             background-color: #7c3aed;
@@ -63,48 +64,50 @@
             color: #ff6b6b;
             text-align: center;
             margin-bottom: 5px;
+            font-size: 22px; /* Reducido para que no desborde en móviles */
         }
         .subtitle {
             text-align: center;
             color: #4a90e2;
-            margin-bottom: 25px;
-            font-size: 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
         }
         .acciones-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 12px;
+            margin-bottom: 20px;
         }
         .panel {
             background: #f0f8ff;
-            padding: 15px;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: 10px;
             border: 2px dashed #4ecdc4;
         }
         .panel h3 {
             margin-top: 0;
             color: #2b7a78;
-            font-size: 16px;
+            font-size: 14px;
             text-align: center;
+            margin-bottom: 8px;
         }
         .form-group {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         label {
             font-weight: bold;
             display: block;
-            margin-bottom: 3px;
-            font-size: 13px;
+            margin-bottom: 2px;
+            font-size: 12px;
             color: #555;
         }
         select, input {
             width: 100%;
-            padding: 8px;
-            border-radius: 8px;
+            padding: 7px;
+            border-radius: 6px;
             border: 1px solid #ccc;
             box-sizing: border-box;
-            font-size: 14px;
+            font-size: 13px;
         }
         button {
             width: 100%;
@@ -112,11 +115,11 @@
             color: white;
             font-weight: bold;
             border: none;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 6px;
+            padding: 8px;
             cursor: pointer;
-            font-size: 14px;
-            margin-top: 8px;
+            font-size: 13px;
+            margin-top: 6px;
             transition: 0.2s;
         }
         button:hover {
@@ -125,22 +128,22 @@
         .btn-imprimir {
             background-color: #f59e0b;
             margin-top: 15px;
-            font-size: 16px;
+            font-size: 14px;
         }
         .btn-imprimir:hover {
             background-color: #d97706;
         }
         .btn-reiniciar {
             background-color: #ef4444;
-            margin-top: 10px;
-            font-size: 15px;
+            margin-top: 8px;
+            font-size: 13px;
         }
         .btn-reiniciar:hover {
             background-color: #dc2626;
         }
         .btn-accion {
-            padding: 5px 10px;
-            font-size: 12px;
+            padding: 4px 8px;
+            font-size: 11px;
             margin: 2px;
             width: auto;
         }
@@ -152,33 +155,66 @@
         }
         .btn-borrar-historial {
             background-color: #ef4444;
-            padding: 3px 8px;
-            font-size: 11px;
+            padding: 2px 6px;
+            font-size: 10px;
             width: auto;
+        }
+        
+        /* Tabla optimizada */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 25px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            white-space: nowrap; /* Mantiene ordenadas las columnas en pantallas grandes */
         }
         th, td {
             border: 1px solid #e2e8f0;
-            padding: 10px;
+            padding: 8px 6px; /* Celdas más compactas */
             text-align: center;
-            font-size: 14px;
+            font-size: 12px; /* Letra ajustada para evitar desbordes */
         }
         th {
             background-color: #ff6b6b;
             color: white;
+            font-size: 12px;
         }
         tr:nth-child(even) {
             background-color: #fafafa;
         }
         .historial-section {
-            margin-top: 30px;
+            margin-top: 20px;
             border-top: 2px dashed #cbd5e1;
-            padding-top: 20px;
+            padding-top: 15px;
+        }
+
+        /* Adaptabilidad exclusiva para Celulares (Pantallas menores a 768px) */
+        @media (max-width: 768px) {
+            .acciones-grid {
+                grid-template-columns: 1fr; /* Una sola columna para los paneles */
+            }
+            .modo-bar {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+            body {
+                padding: 4px;
+            }
+            .container {
+                padding: 10px;
+                border-radius: 10px;
+            }
+            /* Hacemos la tabla más cómoda en móviles comprimiendo textos largos o permitiendo scroll suave */
+            th, td {
+                padding: 6px 4px;
+                font-size: 11px;
+            }
         }
 
         @media print {
@@ -194,23 +230,12 @@
             .modo-bar, .banner-demo, .acciones-grid, .btn-imprimir, .btn-reiniciar, .columna-acciones, .columna-borrar {
                 display: none !important;
             }
-            h1 { color: #000; }
+            h1 { color: #000; font-size: 20px; }
             .subtitle { color: #555; }
             th {
                 background-color: #333 !important;
                 color: white !important;
                 -webkit-print-color-adjust: exact;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .acciones-grid {
-                grid-template-columns: 1fr;
-            }
-            .modo-bar {
-                flex-direction: column;
-                gap: 10px;
-                text-align: center;
             }
         }
     </style>
@@ -226,11 +251,11 @@
         <!-- Banner visible solo en Modo Pruebas -->
         <div class="banner-demo" id="banner-demo">
             ⚠️ ESTÁS EN MODO PRUEBA / DEMOSTRACIÓN<br>
-            <span style="font-weight: normal; font-size: 13px;">Puedes hacer cualquier prueba aquí. Tus datos reales están protegidos e intactos.</span>
+            <span style="font-weight: normal; font-size: 11px;">Puedes hacer pruebas aquí. Tus datos reales están protegidos.</span>
         </div>
 
-        <h1>🍎✏️ ¡Control Mágico de Copias y Saldos! 🖍️📚</h1>
-        <p class="subtitle">¡Organizar el salón nunca fue tan divertido y fácil! (Costo por copia: 80 Bs)</p>
+        <h1>🍎✏️ Control de Copias y Saldos 🖍️📚</h1>
+        <p class="subtitle">Costo por copia: 80 Bs</p>
 
         <div class="acciones-grid">
             <!-- Panel Abono -->
@@ -274,7 +299,7 @@
                     <input type="date" id="fecha-copia">
                 </div>
                 <div class="form-group">
-                    <label>Cantidad de Copias:</label>
+                    <label>Cantidad:</label>
                     <input type="number" id="input-copia" min="1" value="1">
                 </div>
                 <div class="form-group">
@@ -285,18 +310,18 @@
             </div>
         </div>
 
-        <h3 style="margin-top: 25px; color: #4a90e2; text-align: center;">📋 Resumen de Alumnos</h3>
+        <h3 style="margin-top: 15px; color: #4a90e2; text-align: center; font-size: 15px;">📋 Resumen de Alumnos</h3>
         
-        <div style="overflow-x:auto;">
+        <div class="table-responsive">
             <table id="tabla-alumnos">
                 <thead>
                     <tr>
                         <th style="text-align: left;">Estudiante</th>
-                        <th>Total Abonado</th>
-                        <th>Copias Sacadas</th>
-                        <th>Total Gastado</th>
-                        <th>Saldo Restante</th>
-                        <th class="columna-acciones">Acciones ⚙️</th>
+                        <th>Abonado</th>
+                        <th>Copias</th>
+                        <th>Gastado</th>
+                        <th>Saldo</th>
+                        <th class="columna-acciones">Acción</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -305,17 +330,17 @@
 
         <!-- Historial de Movimientos -->
         <div class="historial-section">
-            <h3 style="color: #8b5cf6; text-align: center;">📜 Historial Detallado de Movimientos</h3>
-            <div style="overflow-x:auto;">
+            <h3 style="color: #8b5cf6; text-align: center; font-size: 15px;">📜 Historial Detallado</h3>
+            <div class="table-responsive">
                 <table id="tabla-historial">
                     <thead>
                         <tr>
                             <th>Fecha</th>
                             <th>Tipo</th>
-                            <th>Estudiante / Detalle</th>
+                            <th>Detalle</th>
                             <th>Descripción</th>
-                            <th>Monto / Copias</th>
-                            <th class="columna-borrar">Borrar</th>
+                            <th>Valor</th>
+                            <th class="columna-borrar">X</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -323,8 +348,8 @@
             </div>
         </div>
 
-        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar Reporte en PDF</button>
-        <button class="btn-reiniciar" onclick="reiniciarTodo()">⚠️ Borrar Todos los Datos de esta Sección</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <button class="btn-reiniciar" onclick="reiniciarTodo()">⚠️ Borrar Datos de esta Sección</button>
     </div>
 
     <script>
@@ -336,7 +361,7 @@
             "Matias", "Franyelis Sanchez", "Hernalis Acoata", "Deimar Acosta",
             "Yoliexy Figueredo", "Carmen Garrido", "Greimar Rivero", "Amura Pinto",
             "Naismar Escobar", "Nayhana Dominguez", "Shaday Coronado", "Eurimar Linarez",
-            "Jhoannys Chavez", "Yeximar", "Fabiana Tovar", "Erika Miao", "Marcelys Escalante"
+            "Jhoannys Chavez", "Yeximar", "Fabiana Tovar", "Erika Miao"
         ];
 
         const hoy = new Date().toISOString().split('T')[0];
@@ -385,15 +410,15 @@
             const bannerDemo = document.getElementById('banner-demo');
 
             if (esModoDemo) {
-                textoEstado.textContent = '🧪 Estás en: MODO PRUEBAS';
+                textoEstado.textContent = '🧪 Modo: PRUEBAS';
                 textoEstado.style.color = '#d97706';
-                btnModo.textContent = '⬅️ Volver a Datos Reales';
+                btnModo.textContent = '⬅️ Volver a Real';
                 btnModo.style.backgroundColor = '#10b981';
                 bannerDemo.style.display = 'block';
             } else {
-                textoEstado.textContent = '🟢 Estás en: DATOS REALES';
+                textoEstado.textContent = '🟢 Modo: REAL';
                 textoEstado.style.color = '#059669';
-                btnModo.textContent = '🧪 Entrar a Modo Pruebas';
+                btnModo.textContent = '🧪 Entrar a Pruebas';
                 btnModo.style.backgroundColor = '#8b5cf6';
                 bannerDemo.style.display = 'none';
             }
@@ -440,12 +465,12 @@
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="text-align: left; font-weight: bold;">${alumn.nombre}</td>
-                    <td>${alumn.abonado.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                    <td>${alumn.abonado.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
                     <td>${alumn.copias}</td>
-                    <td>${gastado.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
-                    <td style="color: ${saldo < 0 ? '#ff6b6b' : '#10b981'}; font-weight: bold;">${saldo.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                    <td>${gastado.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
+                    <td style="color: ${saldo < 0 ? '#ff6b6b' : '#10b981'}; font-weight: bold;">${saldo.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
                     <td class="columna-acciones">
-                        <button class="btn-accion btn-editar" onclick="editarAlumno(${index})">✏️ Corregir</button>
+                        <button class="btn-accion btn-editar" onclick="editarAlumno(${index})">✏️</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -457,7 +482,7 @@
             tbody.innerHTML = '';
 
             if (historial.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="color: #888;">No hay movimientos registrados todavía.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="color: #888;">Sin movimientos registrados.</td></tr>`;
                 return;
             }
 
@@ -466,12 +491,12 @@
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${item.fecha}</td>
-                    <td><span style="background: ${item.tipo === 'Abono' ? '#d1fae5' : '#ede9fe'}; padding: 3px 6px; border-radius: 4px; font-weight: bold;">${item.tipo}</span></td>
+                    <td><span style="background: ${item.tipo === 'Abono' ? '#d1fae5' : '#ede9fe'}; padding: 2px 4px; border-radius: 3px; font-weight: bold;">${item.tipo}</span></td>
                     <td style="font-weight: bold; text-align: left;">${item.detalle}</td>
-                    <td style="text-align: left; color: #555;">${item.descripcion || '(Sin descripción)'}</td>
+                    <td style="text-align: left; color: #555;">${item.descripcion || '-'}</td>
                     <td>${item.valor}</td>
                     <td class="columna-borrar">
-                        <button class="btn-accion btn-borrar-historial" onclick="borrarMovimiento(${realIdx})">❌</button>
+                        <button class="btn-accion btn-borrar-historial" onclick="borrarMovimiento(${realIdx})">X</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -484,22 +509,22 @@
             const monto = parseFloat(document.getElementById('input-abono').value);
             const desc = document.getElementById('desc-abono').value.trim();
 
-            if (!fecha) { alert('Por favor seleccione una fecha.'); return; }
-            if (isNaN(monto) || monto <= 0) { alert('Por favor ingrese un monto válido.'); return; }
+            if (!fecha) { alert('Seleccione una fecha.'); return; }
+            if (isNaN(monto) || monto <= 0) { alert('Ingrese un monto válido.'); return; }
 
             alumnos[index].abonado += monto;
             historial.push({
                 fecha: fecha,
                 tipo: 'Abono',
                 detalle: alumnos[index].nombre,
-                descripcion: desc || 'Abono de dinero',
-                valor: `+${monto.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs`
+                descripcion: desc || 'Abono',
+                valor: `+${monto.toLocaleString('es-VE', {minimumFractionDigits: 2})}`
             });
 
             document.getElementById('input-abono').value = '';
             document.getElementById('desc-abono').value = '';
             guardarDatos();
-            alert('¡Abono registrado con éxito! 🎉');
+            alert('¡Abono registrado! 🎉');
         }
 
         function registrarCopias() {
@@ -508,8 +533,8 @@
             const cant = parseInt(document.getElementById('input-copia').value);
             const desc = document.getElementById('desc-copia').value.trim();
 
-            if (!fecha) { alert('Por favor seleccione una fecha.'); return; }
-            if (isNaN(cant) || cant <= 0) { alert('Por favor ingrese una cantidad válida.'); return; }
+            if (!fecha) { alert('Seleccione una fecha.'); return; }
+            if (isNaN(cant) || cant <= 0) { alert('Ingrese una cantidad válida.'); return; }
 
             if (tipo === 'individual') {
                 const index = document.getElementById('select-copia').value;
@@ -518,8 +543,8 @@
                     fecha: fecha,
                     tipo: 'Copia',
                     detalle: alumnos[index].nombre,
-                    descripcion: desc || 'Copias individuales',
-                    valor: `${cant} copias`
+                    descripcion: desc || 'Copias',
+                    valor: `${cant} c.`
                 });
                 alert(`¡Listo! Se sumaron ${cant} copias a ${alumnos[index].nombre}.`);
             } else {
@@ -529,11 +554,11 @@
                 historial.push({
                     fecha: fecha,
                     tipo: 'Masivo',
-                    detalle: 'TODOS LOS ALUMNOS (28)',
-                    descripcion: desc || 'Copia general para el salón',
-                    valor: `${cant} copias c/u`
+                    detalle: 'TODOS (28)',
+                    descripcion: desc || 'Copias generales',
+                    valor: `${cant} c/u`
                 });
-                alert(`¡Guau! Se sumaron ${cant} copias a los 28 alumnos al mismo tiempo.`);
+                alert(`¡Listo! Se sumaron ${cant} copias a todo el salón.`);
             }
 
             document.getElementById('input-copia').value = '1';
@@ -543,46 +568,42 @@
 
         function editarAlumno(index) {
             let alumno = alumnos[index];
-            let nuevoAbono = prompt(`Corregir TOTAL ABONADO para ${alumno.nombre}:`, alumno.abonado);
+            let nuevoAbono = prompt(`Corregir ABONADO para ${alumno.nombre}:`, alumno.abonado);
             if (nuevoAbono === null) return;
-            let nuevasCopias = prompt(`Corregir total de COPIAS SACADAS para ${alumno.nombre}:`, alumno.copias);
+            let nuevasCopias = prompt(`Corregir COPIAS para ${alumno.nombre}:`, alumno.copias);
             if (nuevasCopias === null) return;
 
             let abonadoParsed = parseFloat(nuevoAbono);
             let copiasParsed = parseInt(nuevasCopias);
 
             if (isNaN(abonadoParsed) || isNaN(copiasParsed)) {
-                alert('Error: Por favor introduce números válidos.');
+                alert('Introduzca números válidos.');
                 return;
             }
 
             alumnos[index].abonado = abonadoParsed;
             alumnos[index].copias = copiasParsed;
             guardarDatos();
-            alert(`¡Datos corregidos con éxito para ${alumno.nombre}! ✨`);
+            alert(`¡Datos corregidos para ${alumno.nombre}! ✨`);
         }
 
         function borrarMovimiento(index) {
-            if (confirm('¿Estás seguro de eliminar este registro del historial?')) {
+            if (confirm('¿Eliminar este registro del historial?')) {
                 historial.splice(index, 1);
                 guardarDatos();
             }
         }
 
         function reiniciarTodo() {
-            const contexto = esModoDemo ? 'del MODO PRUEBAS' : 'de los DATOS REALES';
-            if (confirm(`⚠️ ¿ESTÁS SEGURA? Esto borrará todos los datos ${contexto}, dejando la lista limpia desde cero.`)) {
-                if (confirm('¿Confirmas eliminar estos datos?')) {
-                    const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
-                    const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
-                    localStorage.removeItem(keyAlumnos);
-                    localStorage.removeItem(keyHistorial);
-                    cargarDatosSegunModo();
-                }
+            if (confirm('⚠️ ¿ESTÁS SEGURA? Se borrarán los datos de esta sección.')) {
+                const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
+                const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
+                localStorage.removeItem(keyAlumnos);
+                localStorage.removeItem(keyHistorial);
+                cargarDatosSegunModo();
             }
         }
 
-        // Carga inicial
         cargarDatosSegunModo();
     </script>
 </body>
