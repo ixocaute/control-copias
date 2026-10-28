@@ -20,6 +20,45 @@
             border-radius: 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
+        /* Banner de aviso para el modo de prueba */
+        .banner-demo {
+            display: none;
+            background-color: #fef08a;
+            border: 2px dashed #facc15;
+            color: #854d0e;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        /* Barra superior para cambiar de modo */
+        .modo-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            background: #f8fafc;
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .indicador-estado {
+            font-size: 14px;
+            font-weight: bold;
+            color: #059669;
+        }
+        .btn-modo {
+            background-color: #8b5cf6;
+            width: auto;
+            padding: 8px 15px;
+            font-size: 13px;
+            margin-top: 0;
+        }
+        .btn-modo:hover {
+            background-color: #7c3aed;
+        }
         h1 {
             color: #ff6b6b;
             text-align: center;
@@ -82,12 +121,6 @@
         }
         button:hover {
             background-color: #ff6b6b;
-        }
-        .btn-masivo {
-            background-color: #8b5cf6;
-        }
-        .btn-masivo:hover {
-            background-color: #7c3aed;
         }
         .btn-imprimir {
             background-color: #f59e0b;
@@ -158,7 +191,7 @@
                 padding: 0;
                 max-width: 100%;
             }
-            .acciones-grid, .btn-imprimir, .btn-reiniciar, .columna-acciones, .columna-borrar {
+            .modo-bar, .banner-demo, .acciones-grid, .btn-imprimir, .btn-reiniciar, .columna-acciones, .columna-borrar {
                 display: none !important;
             }
             h1 { color: #000; }
@@ -174,11 +207,28 @@
             .acciones-grid {
                 grid-template-columns: 1fr;
             }
+            .modo-bar {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Barra de estado y cambio de modo -->
+        <div class="modo-bar">
+            <span class="indicador-estado" id="texto-estado">🟢 Estás en: DATOS REALES</span>
+            <button class="btn-modo" id="btn-cambiar-modo" onclick="alternarModo()">🧪 Entrar a Modo Pruebas</button>
+        </div>
+
+        <!-- Banner visible solo en Modo Pruebas -->
+        <div class="banner-demo" id="banner-demo">
+            ⚠️ ESTÁS EN MODO PRUEBA / DEMOSTRACIÓN<br>
+            <span style="font-weight: normal; font-size: 13px;">Puedes hacer cualquier prueba aquí. Tus datos reales están protegidos e intactos.</span>
+        </div>
+
         <h1>🍎✏️ ¡Control Mágico de Copias y Saldos! 🖍️📚</h1>
         <p class="subtitle">¡Organizar el salón nunca fue tan divertido y fácil! (Costo por copia: 80 Bs)</p>
 
@@ -274,7 +324,7 @@
         </div>
 
         <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar Reporte en PDF</button>
-        <button class="btn-reiniciar" onclick="reiniciarTodo()">⚠️ Borrar Todos los Datos (Reiniciar)</button>
+        <button class="btn-reiniciar" onclick="reiniciarTodo()">⚠️ Borrar Todos los Datos de esta Sección</button>
     </div>
 
     <script>
@@ -286,32 +336,72 @@
             "Matias", "Franyelis Sanchez", "Hernalis Acoata", "Deimar Acosta",
             "Yoliexy Figueredo", "Carmen Garrido", "Greimar Rivero", "Amura Pinto",
             "Naismar Escobar", "Nayhana Dominguez", "Shaday Coronado", "Eurimar Linarez",
-            "Jhoannys Chavez", "Yeximar", "Fabiana Tovar", "Erika Miao", "Marcelys Escalante"
+            "Jhoannys Chavez", "Yeximar", "Fabiana Tovar", "Erika Miao"
         ];
 
         const hoy = new Date().toISOString().split('T')[0];
         document.getElementById('fecha-abono').value = hoy;
         document.getElementById('fecha-copia').value = hoy;
 
-        // Cargar alumnos o crearlos con los 28 nombres obligatorios
-        let alumnos = JSON.parse(localStorage.getItem('control_copias_alumnos'));
-        let historial = JSON.parse(localStorage.getItem('control_copias_historial')) || [];
+        let esModoDemo = false;
+        let alumnos = [];
+        let historial = [];
 
-        if (!alumnos || alumnos.length === 0) {
-            alumnos = nombresIniciales.map(nombre => ({
-                nombre: nombre,
-                abonado: 0,
-                copias: 0
-            }));
-            localStorage.setItem('control_copias_alumnos', JSON.stringify(alumnos));
-        }
+        function cargarDatosSegunModo() {
+            const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
+            const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
 
-        function guardarYActualizar() {
-            localStorage.setItem('control_copias_alumnos', JSON.stringify(alumnos));
-            localStorage.setItem('control_copias_historial', JSON.stringify(historial));
+            alumnos = JSON.parse(localStorage.getItem(keyAlumnos));
+            historial = JSON.parse(localStorage.getItem(keyHistorial)) || [];
+
+            if (!alumnos || alumnos.length === 0) {
+                alumnos = nombresIniciales.map(nombre => ({
+                    nombre: nombre,
+                    abonado: 0,
+                    copias: 0
+                }));
+                localStorage.setItem(keyAlumnos, JSON.stringify(alumnos));
+            }
+
+            actualizarInterfazModo();
             renderizarAlumnos();
             renderizarHistorial();
             inicializarSelects();
+        }
+
+        function guardarDatos() {
+            const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
+            const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
+
+            localStorage.setItem(keyAlumnos, JSON.stringify(alumnos));
+            localStorage.setItem(keyHistorial, JSON.stringify(historial));
+            renderizarAlumnos();
+            renderizarHistorial();
+        }
+
+        function actualizarInterfazModo() {
+            const textoEstado = document.getElementById('texto-estado');
+            const btnModo = document.getElementById('btn-cambiar-modo');
+            const bannerDemo = document.getElementById('banner-demo');
+
+            if (esModoDemo) {
+                textoEstado.textContent = '🧪 Estás en: MODO PRUEBAS';
+                textoEstado.style.color = '#d97706';
+                btnModo.textContent = '⬅️ Volver a Datos Reales';
+                btnModo.style.backgroundColor = '#10b981';
+                bannerDemo.style.display = 'block';
+            } else {
+                textoEstado.textContent = '🟢 Estás en: DATOS REALES';
+                textoEstado.style.color = '#059669';
+                btnModo.textContent = '🧪 Entrar a Modo Pruebas';
+                btnModo.style.backgroundColor = '#8b5cf6';
+                bannerDemo.style.display = 'none';
+            }
+        }
+
+        function alternarModo() {
+            esModoDemo = !esModoDemo;
+            cargarDatosSegunModo();
         }
 
         function inicializarSelects() {
@@ -408,7 +498,7 @@
 
             document.getElementById('input-abono').value = '';
             document.getElementById('desc-abono').value = '';
-            guardarYActualizar();
+            guardarDatos();
             alert('¡Abono registrado con éxito! 🎉');
         }
 
@@ -448,7 +538,7 @@
 
             document.getElementById('input-copia').value = '1';
             document.getElementById('desc-copia').value = '';
-            guardarYActualizar();
+            guardarDatos();
         }
 
         function editarAlumno(index) {
@@ -468,30 +558,32 @@
 
             alumnos[index].abonado = abonadoParsed;
             alumnos[index].copias = copiasParsed;
-            guardarYActualizar();
+            guardarDatos();
             alert(`¡Datos corregidos con éxito para ${alumno.nombre}! ✨`);
         }
 
         function borrarMovimiento(index) {
             if (confirm('¿Estás seguro de eliminar este registro del historial?')) {
                 historial.splice(index, 1);
-                guardarYActualizar();
+                guardarDatos();
             }
         }
 
         function reiniciarTodo() {
-            if (confirm('⚠️ ¿ESTÁS SEGURA? Esto borrará absolutamente todos los abonos, copias e historial, dejando la página limpia desde cero.')) {
-                if (confirm('Estás a punto de eliminar todos los datos de los 28 alumnos. ¿Confirmas esta acción?')) {
-                    localStorage.removeItem('control_copias_alumnos');
-                    localStorage.removeItem('control_copias_historial');
-                    location.reload();
+            const contexto = esModoDemo ? 'del MODO PRUEBAS' : 'de los DATOS REALES';
+            if (confirm(`⚠️ ¿ESTÁS SEGURA? Esto borrará todos los datos ${contexto}, dejando la lista limpia desde cero.`)) {
+                if (confirm('¿Confirmas eliminar estos datos?')) {
+                    const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
+                    const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
+                    localStorage.removeItem(keyAlumnos);
+                    localStorage.removeItem(keyHistorial);
+                    cargarDatosSegunModo();
                 }
             }
         }
 
-        inicializarSelects();
-        renderizarAlumnos();
-        renderizarHistorial();
+        // Carga inicial
+        cargarDatosSegunModo();
     </script>
 </body>
 </html>
