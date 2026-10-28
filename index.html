@@ -89,6 +89,26 @@
         .btn-masivo:hover {
             background-color: #7c3aed;
         }
+        .btn-imprimir {
+            background-color: #f59e0b;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+        .btn-imprimir:hover {
+            background-color: #d97706;
+        }
+        .btn-accion {
+            padding: 5px 10px;
+            font-size: 12px;
+            margin: 2px;
+            width: auto;
+        }
+        .btn-editar {
+            background-color: #3b82f6;
+        }
+        .btn-editar:hover {
+            background-color: #2563eb;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -107,6 +127,29 @@
         tr:nth-child(even) {
             background-color: #fafafa;
         }
+
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+            }
+            .acciones-grid, .btn-imprimir, .columna-acciones {
+                display: none !important;
+            }
+            h1 { color: #000; }
+            .subtitle { color: #555; }
+            th {
+                background-color: #333 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+
         @media (max-width: 768px) {
             .acciones-grid {
                 grid-template-columns: 1fr;
@@ -160,6 +203,7 @@
         </div>
 
         <h3 style="margin-top: 25px; color: #4a90e2; text-align: center;">📋 Lista y Estado de Alumnos</h3>
+        
         <div style="overflow-x:auto;">
             <table id="tabla-alumnos">
                 <thead>
@@ -169,11 +213,14 @@
                         <th>Copias Sacadas</th>
                         <th>Total Gastado</th>
                         <th>Saldo Restante</th>
+                        <th class="columna-acciones">Acciones ⚙️</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
         </div>
+
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar Reporte en PDF</button>
     </div>
 
     <script>
@@ -202,6 +249,7 @@
         function guardarYActualizar() {
             localStorage.setItem('control_copias_alumnos', JSON.stringify(alumnos));
             renderizar();
+            inicializarSelects();
         }
 
         function inicializarSelects() {
@@ -227,7 +275,7 @@
             const tbody = document.querySelector('#tabla-alumnos tbody');
             tbody.innerHTML = '';
 
-            alumnos.forEach(alumn => {
+            alumnos.forEach((alumn, index) => {
                 let gastado = alumn.copias * COSTO_COPIA;
                 let saldo = alumn.abonado - gastado;
 
@@ -238,6 +286,9 @@
                     <td>${alumn.copias}</td>
                     <td>${gastado.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
                     <td style="color: ${saldo < 0 ? '#ff6b6b' : '#10b981'}; font-weight: bold;">${saldo.toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs</td>
+                    <td class="columna-acciones">
+                        <button class="btn-accion btn-editar" onclick="editarAlumno(${index})">✏️ Corregir</button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -281,6 +332,28 @@
             document.getElementById('input-masivo').value = '1';
             guardarYActualizar();
             alert(`¡Se han sumado ${cant} copias a los 28 alumnos exitosamente! 🚀`);
+        }
+
+        function editarAlumno(index) {
+            let alumno = alumnos[index];
+            let nuevoAbono = prompt(`Corregir TOTAL ABONADO para ${alumno.nombre}:`, alumno.abonado);
+            if (nuevoAbono === null) return; // Si cancela
+
+            let nuevasCopias = prompt(`Corregir total de COPIAS SACADAS para ${alumno.nombre}:`, alumno.copias);
+            if (nuevasCopias === null) return; // Si cancela
+
+            let abonadoParsed = parseFloat(nuevoAbono);
+            let copiasParsed = parseInt(nuevasCopias);
+
+            if (isNaN(abonadoParsed) || isNaN(copiasParsed)) {
+                alert('Error: Por favor introduce números válidos.');
+                return;
+            }
+
+            alumnos[index].abonado = abonadoParsed;
+            alumnos[index].copias = copiasParsed;
+            guardarYActualizar();
+            alert(`¡Datos corregidos con éxito para ${alumno.nombre}! ✨`);
         }
 
         inicializarSelects();
