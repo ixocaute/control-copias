@@ -1,0 +1,162 @@
+import os
+import pandas as pd
+import streamlit as st
+
+DATA_FILE = "control_copias_datos.csv"
+COSTO_COPIA = 80
+
+
+def inicializar_datos():
+  if not os.path.exists(DATA_FILE):
+    nombres = [
+        "Alex Hernandez",
+        "Abraham Lopez",
+        "Sebastian Castillo",
+        "Mateo Rojas",
+        "Orlando Lopez",
+        "Yeraldo Minera",
+        "Jhosniell Rodriguez",
+        "Abel Bracho",
+        "Martin Perez",
+        "Luciano Sampallo",
+        "Ezequiel Amparan",
+        "Danyer Fernandez",
+        "Matias",
+        "Franyelis Sanchez",
+        "Hernalis Acoata",
+        "Deimar Acosta",
+        "Yoliexy Figueredo",
+        "Carmen Garrido",
+        "Greimar Rivero",
+        "Amura Pinto",
+        "Naismar Escobar",
+        "Nayhana Dominguez",
+        "Shaday Coronado",
+        "Eurimar Linarez",
+        "Jhoannys Chavez",
+        "Yeximar",
+        "Fabiana Tovar",
+        "Erika Miao",
+    ]
+    df = pd.DataFrame({
+        "Estudiante": nombres,
+        "Total Abonado": 0.0,
+        "Copias Sacadas": 0,
+    })
+    df.to_csv(DATA_FILE, index=False)
+
+
+inicializar_datos()
+
+# Configuración de página con toque divertido
+st.set_page_config(
+    page_title="Control de Copias - Salón de Clases 🍎✏️",
+    page_icon="🎨",
+    layout="centered",
+)
+
+# Estilos personalizados para un toque más infantil y colorido
+st.markdown("""
+    <style>
+    .main {
+        background-color: #fff9e6;
+    }
+    h1 {
+        color: #ff6b6b;
+        text-align: center;
+        font-family: 'Comic Sans MS', cursive, sans-serif;
+    }
+    .stButton>button {
+        background-color: #4ecdc4;
+        color: white;
+        font-weight: bold;
+        border-radius: 12px;
+        border: none;
+        padding: 10px 20px;
+    }
+    .stButton>button:hover {
+        background-color: #ff6b6b;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("🍎✏️ ¡Control Mágico de Copias y Saldos! 🖍️📚")
+st.markdown(
+    "<h3 style='text-align: center; color: #4a90e2; font-size: 18px;'>¡Organizar"
+    " el salón nunca fue tan divertido y fácil! (Costo por copia: 80 Bs)</h3>",
+    unsafe_allow_html=True,
+)
+
+st.write("")
+
+# Cargar datos actuales
+df = pd.read_csv(DATA_FILE)
+df["Total Gastado (Bs)"] = df["Copias Sacadas"] * COSTO_COPIA
+df["Saldo Restante (Bs)"] = df["Total Abonado"] - df["Total Gastado (Bs)"]
+
+# Mostrar tabla interactiva con diseño amigable
+st.dataframe(df, use_container_width=True)
+
+st.divider()
+st.subheader("🎨 Panel de Acciones de la maestra")
+
+# Menú de acciones decorado
+accion = st.selectbox(
+    "⭐ ¿Qué vamos a hacer hoy?",
+    [
+        "💰 Registrar Abono de un alumno",
+        "📄 Sumar Copias a un alumno",
+        "🏫 ¡Copia Masiva para TODO el salón! 🎉",
+    ],
+)
+
+if accion == "💰 Registrar Abono de un alumno":
+  with st.form("form_abono"):
+    st.write("### 🪙 ¡Registrar un dinerito recibido!")
+    alumno = st.selectbox("👶 Selecciona al estudiante:", df["Estudiante"].tolist())
+    monto = st.number_input(
+        "💵 Monto del Abono (Bs):", min_value=0.0, step=10.0
+    )
+    submitted = st.form_submit_button("🌟 Guardar Abono")
+    if submitted:
+      df.loc[df["Estudiante"] == alumno, "Total Abonado"] += monto
+      df.drop(columns=["Total Gastado (Bs)", "Saldo Restante (Bs)"]).to_csv(
+          DATA_FILE, index=False
+      )
+      st.success(f"🎉 ¡Excelente! Abono de {monto} Bs registrado para {alumno}.")
+      st.rerun()
+
+elif accion == "📄 Sumar Copias a un alumno":
+  with st.form("form_copias"):
+    st.write("### 📋 ¡Anotar copias entregadas!")
+    alumno = st.selectbox("👶 Selecciona al estudiante:", df["Estudiante"].tolist())
+    cant = st.number_input(
+        "📄 Cantidad de copias:", min_value=1, step=1, value=1
+    )
+    submitted = st.form_submit_button("🌟 Registrar Copias")
+    if submitted:
+      df.loc[df["Estudiante"] == alumno, "Copias Sacadas"] += cant
+      df.drop(columns=["Total Gastado (Bs)", "Saldo Restante (Bs)"]).to_csv(
+          DATA_FILE, index=False
+      )
+      st.success(f"🎈 ¡Listo! Se sumaron {cant} copias a {alumno}.")
+      st.rerun()
+
+elif accion == "🏫 ¡Copia Masiva para TODO el salón! 🎉":
+  with st.form("form_masivo"):
+    st.write("### 🚀 ¡Actividad para todos los amiguitos!")
+    cant = st.number_input(
+        "📚 ¿Cuántas copias sacó cada niño hoy?", min_value=1, step=1, value=1
+    )
+    submitted = st.form_submit_button("🌟 ¡Aplicar a Todo el Salón!")
+    if submitted:
+      df["Copias Sacadas"] += cant
+      df.drop(columns=["Total Gastado (Bs)", "Saldo Restante (Bs)"]).to_csv(
+          DATA_FILE, index=False
+      )
+      st.success(
+          f"🎨 ¡Guau! Se sumaron {cant} copias a los 28 alumnos al mismo tiempo."
+          " ¡Buen trabajo!"
+      )
+      st.rerun()
