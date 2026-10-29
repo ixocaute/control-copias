@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Control de Copias - Salón de Clases 🍎✏️</title>
 
+    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff6b6b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Control Copias">
     <link rel="apple-touch-icon" href="icon-192.png">
-    
-    <title>Control de Copias - Salón de Clases 🍎✏️</title>
+
     <style>
         body {
             background-color: #fff9e6;
@@ -50,6 +52,8 @@
             padding: 8px 12px;
             border-radius: 8px;
             border: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .indicador-estado {
             font-size: 13px;
@@ -67,6 +71,16 @@
         .btn-modo:hover {
             background-color: #7c3aed;
         }
+        .estado-conexion {
+            font-size: 11px;
+            color: #64748b;
+            width: 100%;
+            text-align: center;
+        }
+        .estado-conexion.ok { color: #059669; }
+        .estado-conexion.error { color: #dc2626; }
+        .estado-conexion.loading { color: #d97706; }
+
         h1 {
             color: #ff6b6b;
             text-align: center;
@@ -174,6 +188,10 @@
         button:hover {
             background-color: #ff6b6b;
         }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
         .btn-imprimir {
             background-color: #f59e0b;
             margin-top: 15px;
@@ -241,6 +259,23 @@
             padding-top: 15px;
         }
 
+        /* Overlay de carga */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.75);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+        .loading-overlay.show {
+            display: flex;
+        }
+
         @media (max-width: 768px) {
             .acciones-grid {
                 grid-template-columns: 1fr;
@@ -273,7 +308,7 @@
                 padding: 0;
                 max-width: 100%;
             }
-            .modo-bar, .banner-demo, .panel-precio, .acciones-grid, .btn-imprimir, .btn-reiniciar, .columna-acciones, .columna-borrar {
+            .modo-bar, .banner-demo, .panel-precio, .acciones-grid, .btn-imprimir, .btn-reiniciar, .columna-acciones, .columna-borrar, .loading-overlay {
                 display: none !important;
             }
             h1 { color: #000; font-size: 20px; }
@@ -287,11 +322,14 @@
     </style>
 </head>
 <body>
+    <div class="loading-overlay" id="loading-overlay">⏳ Guardando / Cargando...</div>
+
     <div class="container">
         <!-- Barra de estado y cambio de modo -->
         <div class="modo-bar">
             <span class="indicador-estado" id="texto-estado">🟢 Estás en: DATOS REALES</span>
             <button class="btn-modo" id="btn-cambiar-modo" onclick="alternarModo()">🧪 Entrar a Modo Pruebas</button>
+            <div class="estado-conexion" id="estado-conexion">Conectando...</div>
         </div>
 
         <!-- Banner visible solo en Modo Pruebas -->
@@ -334,7 +372,7 @@
                     <label>Descripción (Opcional):</label>
                     <input type="text" id="desc-abono" placeholder="Ej. Abono semanal">
                 </div>
-                <button onclick="registrarAbono()">🌟 Guardar Abono</button>
+                <button id="btn-abono" onclick="registrarAbono()">🌟 Guardar Abono</button>
             </div>
 
             <!-- Panel Copias -->
@@ -363,11 +401,11 @@
                     <label>Descripción / Motivo:</label>
                     <input type="text" id="desc-copia" placeholder="Ej. Guía de Matemática">
                 </div>
-                <button onclick="registrarCopias()">🌟 Registrar Copias</button>
+                <button id="btn-copia" onclick="registrarCopias()">🌟 Registrar Copias</button>
             </div>
         </div>
 
-        <h3 style="margin-top: 15px; color: #4a90e2; text-align: center; font-size: 15px;">📋 Resumen de Alumnos (29)</h3>
+        <h3 style="margin-top: 15px; color: #4a90e2; text-align: center; font-size: 15px;">📋 Resumen de Alumnos (<span id="total-alumnos">29</span>)</h3>
         
         <div class="table-responsive">
             <table id="tabla-alumnos">
@@ -406,11 +444,16 @@
         </div>
 
         <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
-        <button class="btn-reiniciar" onclick="reiniciarTodo()">⚠️ Borrar Datos de esta Sección</button>
+        <button class="btn-reiniciar" id="btn-reiniciar" onclick="reiniciarTodo()">⚠️ Borrar Datos de esta Sección</button>
     </div>
 
     <script>
-        // Lista oficial de 29 estudiantes (incluye a Marcelys Escalante)
+        // ============================================
+        // CONFIGURACIÓN
+        // ============================================
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby6GN1iruShnuinSacaRjNJbqmSKncYa5MH_D6y3IX7i6_SGZKYJETdreCs7cW8A7t3dw/exec';
+
+        // Lista oficial de 29 estudiantes
         const nombresIniciales = [
             "Alex Hernandez", "Abraham Lopez", "Sebastian Castillo", "Mateo Rojas",
             "Orlando Lopez", "Yeraldo Minera", "Jhosniell Rodriguez", "Abel Bracho",
@@ -422,65 +465,191 @@
         ];
 
         let costoCopia = 50;
+        let esModoDemo = false;
+        let alumnos = [];
+        let historial = [];
+        let guardando = false;
 
         const hoy = new Date().toISOString().split('T')[0];
         document.getElementById('fecha-abono').value = hoy;
         document.getElementById('fecha-copia').value = hoy;
 
-        let esModoDemo = false;
-        let alumnos = [];
-        let historial = [];
+        // ============================================
+        // UTILIDADES DE UI
+        // ============================================
+        function mostrarCarga(mostrar) {
+            document.getElementById('loading-overlay').classList.toggle('show', mostrar);
+            guardando = mostrar;
+            document.getElementById('btn-abono').disabled = mostrar;
+            document.getElementById('btn-copia').disabled = mostrar;
+            document.getElementById('btn-reiniciar').disabled = mostrar;
+        }
 
-        function cargarDatosSegunModo() {
-            const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
-            const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
-            const keyCosto = esModoDemo ? 'control_copias_costo_DEMO' : 'control_copias_costo';
+        function setEstadoConexion(texto, tipo = '') {
+            const el = document.getElementById('estado-conexion');
+            el.textContent = texto;
+            el.className = 'estado-conexion ' + tipo;
+        }
 
-            costoCopia = parseFloat(localStorage.getItem(keyCosto)) || 50;
-            document.getElementById('input-costo-copia').value = costoCopia;
-            document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
+        // ============================================
+        // COMUNICACIÓN CON GOOGLE APPS SCRIPT
+        // ============================================
+        async function llamarAPI(action, payload = null) {
+            const url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
 
-            alumnos = JSON.parse(localStorage.getItem(keyAlumnos));
-            historial = JSON.parse(localStorage.getItem(keyHistorial)) || [];
+            const options = {
+                method: payload ? 'POST' : 'GET',
+                redirect: 'follow'
+            };
 
-            // Si no existen datos o si falta algún niño de la lista oficial, sincronizar la lista
-            if (!alumnos || alumnos.length === 0) {
-                alumnos = nombresIniciales.map(nombre => ({
-                    nombre: nombre,
-                    abonado: 0,
-                    copias: 0
-                }));
-            } else {
-                // Asegurar que Marcelys y cualquier otro nombre de la lista existan
-                nombresIniciales.forEach(nombreOficial => {
-                    let existe = alumnos.some(a => a.nombre === nombreOficial);
-                    if (!existe) {
-                        alumnos.push({ nombre: nombreOficial, abonado: 0, copias: 0 });
-                    }
-                });
+            if (payload) {
+                options.body = JSON.stringify({ action, ...payload });
+                options.headers = { 'Content-Type': 'text/plain;charset=utf-8' }; // evita preflight CORS
             }
 
-            localStorage.setItem(keyAlumnos, JSON.stringify(alumnos));
+            const response = await fetch(url, options);
+            const text = await response.text();
 
-            actualizarInterfazModo();
-            renderizarAlumnos();
-            renderizarHistorial();
-            inicializarSelects();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error('Respuesta inválida del servidor: ' + text.substring(0, 100));
+            }
+
+            if (!data.success) {
+                throw new Error(data.error || 'Error desconocido del servidor');
+            }
+            return data;
         }
 
-        function guardarDatos() {
-            const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
-            const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
-            const keyCosto = esModoDemo ? 'control_copias_costo_DEMO' : 'control_copias_costo';
+        // ============================================
+        // CARGA Y GUARDADO
+        // ============================================
+        async function cargarDatosSegunModo() {
+            mostrarCarga(true);
 
-            localStorage.setItem(keyAlumnos, JSON.stringify(alumnos));
-            localStorage.setItem(keyHistorial, JSON.stringify(historial));
-            localStorage.setItem(keyCosto, costoCopia);
+            try {
+                if (esModoDemo) {
+                    // === MODO DEMO (localStorage) ===
+                    setEstadoConexion('🧪 Modo prueba (datos locales)', 'ok');
 
-            renderizarAlumnos();
-            renderizarHistorial();
+                    const keyAlumnos = 'control_copias_alumnos_DEMO';
+                    const keyHistorial = 'control_copias_historial_DEMO';
+                    const keyCosto = 'control_copias_costo_DEMO';
+
+                    costoCopia = parseFloat(localStorage.getItem(keyCosto)) || 50;
+                    alumnos = JSON.parse(localStorage.getItem(keyAlumnos)) || [];
+                    historial = JSON.parse(localStorage.getItem(keyHistorial)) || [];
+
+                    if (!alumnos || alumnos.length === 0) {
+                        alumnos = nombresIniciales.map(nombre => ({
+                            nombre: nombre,
+                            abonado: 0,
+                            copias: 0
+                        }));
+                    } else {
+                        // Asegurar que todos los nombres oficiales existan
+                        nombresIniciales.forEach(nombreOficial => {
+                            if (!alumnos.some(a => a.nombre === nombreOficial)) {
+                                alumnos.push({ nombre: nombreOficial, abonado: 0, copias: 0 });
+                            }
+                        });
+                    }
+                } else {
+                    // === MODO REAL (Google Sheets) ===
+                    setEstadoConexion('⏳ Cargando desde Google Sheets...', 'loading');
+
+                    const data = await llamarAPI('getAll');
+
+                    costoCopia = data.costoCopia || 50;
+                    alumnos = data.alumnos || [];
+                    historial = data.historial || [];
+
+                    // Si la hoja está vacía, inicializamos con la lista oficial
+                    if (!alumnos || alumnos.length === 0) {
+                        alumnos = nombresIniciales.map(nombre => ({
+                            nombre: nombre,
+                            abonado: 0,
+                            copias: 0
+                        }));
+                        // Guardamos la lista inicial
+                        await guardarDatos(true); // silent
+                    } else {
+                        // Asegurar que no falte ningún alumno de la lista oficial
+                        let faltan = false;
+                        nombresIniciales.forEach(nombreOficial => {
+                            if (!alumnos.some(a => a.nombre === nombreOficial)) {
+                                alumnos.push({ nombre: nombreOficial, abonado: 0, copias: 0 });
+                                faltan = true;
+                            }
+                        });
+                        if (faltan) {
+                            await guardarDatos(true);
+                        }
+                    }
+
+                    setEstadoConexion('🟢 Conectado a Google Sheets', 'ok');
+                }
+
+                // Actualizar UI
+                document.getElementById('input-costo-copia').value = costoCopia;
+                document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
+                document.getElementById('total-alumnos').textContent = alumnos.length;
+
+                actualizarInterfazModo();
+                renderizarAlumnos();
+                renderizarHistorial();
+                inicializarSelects();
+
+            } catch (err) {
+                console.error(err);
+                setEstadoConexion('❌ Error: ' + err.message, 'error');
+                alert('Error al cargar datos:\n' + err.message + '\n\nRevisa que el Apps Script esté desplegado correctamente y con acceso "Cualquier persona".');
+            } finally {
+                mostrarCarga(false);
+            }
         }
 
+        async function guardarDatos(silencioso = false) {
+            if (guardando && !silencioso) return;
+
+            if (!silencioso) mostrarCarga(true);
+
+            try {
+                if (esModoDemo) {
+                    // Guardar en localStorage
+                    localStorage.setItem('control_copias_alumnos_DEMO', JSON.stringify(alumnos));
+                    localStorage.setItem('control_copias_historial_DEMO', JSON.stringify(historial));
+                    localStorage.setItem('control_copias_costo_DEMO', costoCopia);
+                } else {
+                    // Guardar en Google Sheets
+                    setEstadoConexion('⏳ Guardando en Google Sheets...', 'loading');
+                    await llamarAPI('saveAll', {
+                        alumnos: alumnos,
+                        historial: historial,
+                        costoCopia: costoCopia
+                    });
+                    setEstadoConexion('🟢 Guardado correctamente', 'ok');
+                }
+
+                renderizarAlumnos();
+                renderizarHistorial();
+
+            } catch (err) {
+                console.error(err);
+                setEstadoConexion('❌ Error al guardar: ' + err.message, 'error');
+                if (!silencioso) {
+                    alert('Error al guardar:\n' + err.message);
+                }
+            } finally {
+                if (!silencioso) mostrarCarga(false);
+            }
+        }
+
+        // ============================================
+        // PRECIO
+        // ============================================
         function fijarPrecio(nuevoPrecio) {
             costoCopia = nuevoPrecio;
             document.getElementById('input-costo-copia').value = nuevoPrecio;
@@ -500,6 +669,9 @@
             guardarDatos();
         }
 
+        // ============================================
+        // MODO REAL / DEMO
+        // ============================================
         function actualizarInterfazModo() {
             const textoEstado = document.getElementById('texto-estado');
             const btnModo = document.getElementById('btn-cambiar-modo');
@@ -521,10 +693,14 @@
         }
 
         function alternarModo() {
+            if (guardando) return;
             esModoDemo = !esModoDemo;
             cargarDatosSegunModo();
         }
 
+        // ============================================
+        // SELECTS Y RENDER
+        // ============================================
         function inicializarSelects() {
             const selectAbono = document.getElementById('select-abono');
             const selectCopia = document.getElementById('select-copia');
@@ -599,7 +775,12 @@
             });
         }
 
-        function registrarAbono() {
+        // ============================================
+        // ACCIONES PRINCIPALES
+        // ============================================
+        async function registrarAbono() {
+            if (guardando) return;
+
             const index = document.getElementById('select-abono').value;
             const fecha = document.getElementById('fecha-abono').value;
             const monto = parseFloat(document.getElementById('input-abono').value);
@@ -619,11 +800,14 @@
 
             document.getElementById('input-abono').value = '';
             document.getElementById('desc-abono').value = '';
-            guardarDatos();
+
+            await guardarDatos();
             alert('¡Abono registrado! 🎉');
         }
 
-        function registrarCopias() {
+        async function registrarCopias() {
+            if (guardando) return;
+
             const tipo = document.getElementById('tipo-copia').value;
             const fecha = document.getElementById('fecha-copia').value;
             const cant = parseInt(document.getElementById('input-copia').value);
@@ -659,10 +843,13 @@
 
             document.getElementById('input-copia').value = '1';
             document.getElementById('desc-copia').value = '';
-            guardarDatos();
+
+            await guardarDatos();
         }
 
-        function editarAlumno(index) {
+        async function editarAlumno(index) {
+            if (guardando) return;
+
             let alumno = alumnos[index];
             let nuevoAbono = prompt(`Corregir ABONADO para ${alumno.nombre}:`, alumno.abonado);
             if (nuevoAbono === null) return;
@@ -679,39 +866,53 @@
 
             alumnos[index].abonado = abonadoParsed;
             alumnos[index].copias = copiasParsed;
-            guardarDatos();
+
+            await guardarDatos();
             alert(`¡Datos corregidos para ${alumno.nombre}! ✨`);
         }
 
-        function borrarMovimiento(index) {
-            if (confirm('¿Eliminar este registro del historial?')) {
-                historial.splice(index, 1);
-                guardarDatos();
+        async function borrarMovimiento(index) {
+            if (guardando) return;
+            if (!confirm('¿Eliminar este registro del historial?')) return;
+
+            historial.splice(index, 1);
+            await guardarDatos();
+        }
+
+        async function reiniciarTodo() {
+            if (guardando) return;
+            if (!confirm('⚠️ ¿ESTÁS SEGURA?\nSe borrarán los datos de esta sección.')) return;
+
+            if (esModoDemo) {
+                localStorage.removeItem('control_copias_alumnos_DEMO');
+                localStorage.removeItem('control_copias_historial_DEMO');
+                localStorage.removeItem('control_copias_costo_DEMO');
+                await cargarDatosSegunModo();
+            } else {
+                try {
+                    mostrarCarga(true);
+                    setEstadoConexion('⏳ Reiniciando en Google Sheets...', 'loading');
+                    await llamarAPI('reiniciar');
+                    await cargarDatosSegunModo();
+                } catch (err) {
+                    alert('Error al reiniciar: ' + err.message);
+                    mostrarCarga(false);
+                }
             }
         }
 
-        function reiniciarTodo() {
-            if (confirm('⚠️ ¿ESTÁS SEGURA? Se borrarán los datos de esta sección.')) {
-                const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
-                const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
-                const keyCosto = esModoDemo ? 'control_copias_costo_DEMO' : 'control_copias_costo';
-
-                localStorage.removeItem(keyAlumnos);
-                localStorage.removeItem(keyHistorial);
-                localStorage.removeItem(keyCosto);
-                cargarDatosSegunModo();
-            }
-        }
-
+        // ============================================
+        // INICIO + PWA
+        // ============================================
         cargarDatosSegunModo();
 
-        // Registrar Service Worker (PWA)
+        // Registrar Service Worker
         if ('serviceWorker' in navigator) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-              .then(reg => console.log('SW registrado:', reg.scope))
-              .catch(err => console.log('Error SW:', err));
-          });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado:', reg.scope))
+                    .catch(err => console.log('Error al registrar SW:', err));
+            });
         }
     </script>
 </body>
