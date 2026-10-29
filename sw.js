@@ -1,5 +1,5 @@
 // sw.js - Service Worker para Control de Copias
-const CACHE_NAME = 'control-copias-v1';
+const CACHE_NAME = 'control-copias-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,12 @@ const ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS))
+      .then((cache) => {
+        // Intentamos cachear, pero no fallamos si faltan iconos
+        return Promise.allSettled(
+          ASSETS.map(url => cache.add(url).catch(() => null))
+        );
+      })
       .then(() => self.skipWaiting())
   );
 });
@@ -31,20 +36,23 @@ self.addEventListener('activate', (event) => {
 
 // Estrategia: Network first, fallback a cache
 self.addEventListener('fetch', (event) => {
-  // No cachear las peticiones a Google Apps Script
-  if (event.request.url.includes('script.google.com') || 
-      event.request.url.includes('googleusercontent.com')) {
-    return; // dejar pasar normal
+  // No interferir con las peticiones a Google Apps Script
+  if (event.request.url.includes('script.google.com') ||
+      event.request.url.includes('googleusercontent.com') ||
+      event.request.url.includes('macros/s/')) {
+    return; // dejar pasar normal (no cachear)
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Guardar en caché una copia
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, clone);
-        });
+        // Guardar en caché una copia (solo GET exitosos)
+        if (event.request.method === 'GET' && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clone);
+          });
+        }
         return response;
       })
       .catch(() => {
