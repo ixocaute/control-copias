@@ -10,13 +10,13 @@
             font-family: 'Comic Sans MS', cursive, sans-serif, Arial, sans-serif;
             color: #333;
             margin: 0;
-            padding: 10px; /* Reducido para aprovechar espacio en celular */
+            padding: 10px;
         }
         .container {
             max-width: 950px;
             margin: 0 auto;
             background: white;
-            padding: 15px; /* Padding más cómodo para móviles */
+            padding: 15px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
@@ -64,14 +64,56 @@
             color: #ff6b6b;
             text-align: center;
             margin-bottom: 5px;
-            font-size: 22px; /* Reducido para que no desborde en móviles */
+            font-size: 22px;
         }
         .subtitle {
             text-align: center;
             color: #4a90e2;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-size: 13px;
         }
+        
+        /* Panel de Configuración de Precio */
+        .panel-precio {
+            background: #fef3c7;
+            border: 2px dashed #f59e0b;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .panel-precio h3 {
+            margin: 0 0 8px 0;
+            color: #b45309;
+            font-size: 14px;
+        }
+        .precio-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .precio-controls input {
+            width: 90px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 6px;
+        }
+        .btn-precio-rapido {
+            background-color: #f59e0b;
+            color: white;
+            padding: 6px 10px;
+            font-size: 11px;
+            width: auto;
+            margin-top: 0;
+            border-radius: 6px;
+        }
+        .btn-precio-rapido:hover {
+            background-color: #d97706;
+        }
+
         .acciones-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -160,7 +202,6 @@
             width: auto;
         }
         
-        /* Tabla optimizada */
         .table-responsive {
             width: 100%;
             overflow-x: auto;
@@ -171,13 +212,13 @@
             border-collapse: collapse;
             margin-top: 10px;
             margin-bottom: 20px;
-            white-space: nowrap; /* Mantiene ordenadas las columnas en pantallas grandes */
+            white-space: nowrap;
         }
         th, td {
             border: 1px solid #e2e8f0;
-            padding: 8px 6px; /* Celdas más compactas */
+            padding: 8px 6px;
             text-align: center;
-            font-size: 12px; /* Letra ajustada para evitar desbordes */
+            font-size: 12px;
         }
         th {
             background-color: #ff6b6b;
@@ -193,10 +234,9 @@
             padding-top: 15px;
         }
 
-        /* Adaptabilidad exclusiva para Celulares (Pantallas menores a 768px) */
         @media (max-width: 768px) {
             .acciones-grid {
-                grid-template-columns: 1fr; /* Una sola columna para los paneles */
+                grid-template-columns: 1fr;
             }
             .modo-bar {
                 flex-direction: column;
@@ -210,7 +250,6 @@
                 padding: 10px;
                 border-radius: 10px;
             }
-            /* Hacemos la tabla más cómoda en móviles comprimiendo textos largos o permitiendo scroll suave */
             th, td {
                 padding: 6px 4px;
                 font-size: 11px;
@@ -227,7 +266,7 @@
                 padding: 0;
                 max-width: 100%;
             }
-            .modo-bar, .banner-demo, .acciones-grid, .btn-imprimir, .btn-reiniciar, .columna-acciones, .columna-borrar {
+            .modo-bar, .banner-demo, .panel-precio, .acciones-grid, .btn-imprimir, .btn-reiniciar, .columna-acciones, .columna-borrar {
                 display: none !important;
             }
             h1 { color: #000; font-size: 20px; }
@@ -255,7 +294,18 @@
         </div>
 
         <h1>🍎✏️ Control de Copias y Saldos 🖍️📚</h1>
-        <p class="subtitle">Costo por copia: 80 Bs</p>
+        <p class="subtitle" id="subtitulo-precio">Costo actual por copia: 50 Bs</p>
+
+        <!-- Configuración del Precio de la Copia -->
+        <div class="panel-precio">
+            <h3>⚙️ Configurar Precio por Copia (Bs)</h3>
+            <div class="precio-controls">
+                <input type="number" id="input-costo-copia" value="50" min="1" step="5" onchange="actualizarPrecioManual()">
+                <button class="btn-precio-rapido" onclick="fijarPrecio(50)">50 Bs</button>
+                <button class="btn-precio-rapido" onclick="fijarPrecio(80)">80 Bs</button>
+                <button class="btn-precio-rapido" onclick="fijarPrecio(100)">100 Bs</button>
+            </div>
+        </div>
 
         <div class="acciones-grid">
             <!-- Panel Abono -->
@@ -310,7 +360,7 @@
             </div>
         </div>
 
-        <h3 style="margin-top: 15px; color: #4a90e2; text-align: center; font-size: 15px;">📋 Resumen de Alumnos</h3>
+        <h3 style="margin-top: 15px; color: #4a90e2; text-align: center; font-size: 15px;">📋 Resumen de Alumnos (29)</h3>
         
         <div class="table-responsive">
             <table id="tabla-alumnos">
@@ -353,7 +403,7 @@
     </div>
 
     <script>
-        const COSTO_COPIA = 80;
+        // Lista oficial de 29 estudiantes (incluye a Marcelys Escalante)
         const nombresIniciales = [
             "Alex Hernandez", "Abraham Lopez", "Sebastian Castillo", "Mateo Rojas",
             "Orlando Lopez", "Yeraldo Minera", "Jhosniell Rodriguez", "Abel Bracho",
@@ -361,8 +411,10 @@
             "Matias", "Franyelis Sanchez", "Hernalis Acoata", "Deimar Acosta",
             "Yoliexy Figueredo", "Carmen Garrido", "Greimar Rivero", "Amura Pinto",
             "Naismar Escobar", "Nayhana Dominguez", "Shaday Coronado", "Eurimar Linarez",
-            "Jhoannys Chavez", "Yeximar", "Fabiana Tovar", "Erika Miao"
+            "Jhoannys Chavez", "Yeximar", "Fabiana Tovar", "Erika Miao", "Marcelys Escalante"
         ];
+
+        let costoCopia = 50;
 
         const hoy = new Date().toISOString().split('T')[0];
         document.getElementById('fecha-abono').value = hoy;
@@ -375,18 +427,33 @@
         function cargarDatosSegunModo() {
             const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
             const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
+            const keyCosto = esModoDemo ? 'control_copias_costo_DEMO' : 'control_copias_costo';
+
+            costoCopia = parseFloat(localStorage.getItem(keyCosto)) || 50;
+            document.getElementById('input-costo-copia').value = costoCopia;
+            document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
 
             alumnos = JSON.parse(localStorage.getItem(keyAlumnos));
             historial = JSON.parse(localStorage.getItem(keyHistorial)) || [];
 
+            // Si no existen datos o si falta algún niño de la lista oficial, sincronizar la lista
             if (!alumnos || alumnos.length === 0) {
                 alumnos = nombresIniciales.map(nombre => ({
                     nombre: nombre,
                     abonado: 0,
                     copias: 0
                 }));
-                localStorage.setItem(keyAlumnos, JSON.stringify(alumnos));
+            } else {
+                // Asegurar que Marcelys y cualquier otro nombre de la lista existan
+                nombresIniciales.forEach(nombreOficial => {
+                    let existe = alumnos.some(a => a.nombre === nombreOficial);
+                    if (!existe) {
+                        alumnos.push({ nombre: nombreOficial, abonado: 0, copias: 0 });
+                    }
+                });
             }
+
+            localStorage.setItem(keyAlumnos, JSON.stringify(alumnos));
 
             actualizarInterfazModo();
             renderizarAlumnos();
@@ -397,11 +464,33 @@
         function guardarDatos() {
             const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
             const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
+            const keyCosto = esModoDemo ? 'control_copias_costo_DEMO' : 'control_copias_costo';
 
             localStorage.setItem(keyAlumnos, JSON.stringify(alumnos));
             localStorage.setItem(keyHistorial, JSON.stringify(historial));
+            localStorage.setItem(keyCosto, costoCopia);
+
             renderizarAlumnos();
             renderizarHistorial();
+        }
+
+        function fijarPrecio(nuevoPrecio) {
+            costoCopia = nuevoPrecio;
+            document.getElementById('input-costo-copia').value = nuevoPrecio;
+            document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
+            guardarDatos();
+        }
+
+        function actualizarPrecioManual() {
+            let val = parseFloat(document.getElementById('input-costo-copia').value);
+            if (isNaN(val) || val <= 0) {
+                alert('Ingrese un costo por copia válido.');
+                document.getElementById('input-costo-copia').value = costoCopia;
+                return;
+            }
+            costoCopia = val;
+            document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
+            guardarDatos();
         }
 
         function actualizarInterfazModo() {
@@ -459,7 +548,7 @@
             tbody.innerHTML = '';
 
             alumnos.forEach((alumn, index) => {
-                let gastado = alumn.copias * COSTO_COPIA;
+                let gastado = alumn.copias * costoCopia;
                 let saldo = alumn.abonado - gastado;
 
                 let tr = document.createElement('tr');
@@ -554,7 +643,7 @@
                 historial.push({
                     fecha: fecha,
                     tipo: 'Masivo',
-                    detalle: 'TODOS (28)',
+                    detalle: `TODOS (${alumnos.length})`,
                     descripcion: desc || 'Copias generales',
                     valor: `${cant} c/u`
                 });
@@ -598,8 +687,11 @@
             if (confirm('⚠️ ¿ESTÁS SEGURA? Se borrarán los datos de esta sección.')) {
                 const keyAlumnos = esModoDemo ? 'control_copias_alumnos_DEMO' : 'control_copias_alumnos';
                 const keyHistorial = esModoDemo ? 'control_copias_historial_DEMO' : 'control_copias_historial';
+                const keyCosto = esModoDemo ? 'control_copias_costo_DEMO' : 'control_copias_costo';
+
                 localStorage.removeItem(keyAlumnos);
                 localStorage.removeItem(keyHistorial);
+                localStorage.removeItem(keyCosto);
                 cargarDatosSegunModo();
             }
         }
