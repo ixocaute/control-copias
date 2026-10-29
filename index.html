@@ -2,21 +2,23 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Copias - Salón de Clases 🍎✏️</title>
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff6b6b">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Control Copias">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="icon-192.png">
 
     <style>
         body {
             background-color: #fff9e6;
-            font-family: 'Comic Sans MS', cursive, sans-serif, Arial, sans-serif;
+            font-family: 'Comic Sans MS', 'Comic Sans', cursive, Arial, sans-serif;
             color: #333;
             margin: 0;
             padding: 10px;
@@ -327,8 +329,9 @@
     <div class="container">
         <!-- Barra de estado y cambio de modo -->
         <div class="modo-bar">
-            <span class="indicador-estado" id="texto-estado">🟢 Estás en: DATOS REALES</span>
-            <button class="btn-modo" id="btn-cambiar-modo" onclick="alternarModo()">🧪 Entrar a Modo Pruebas</button>
+            <span class="indicador-estado" id="texto-estado">🟢 Modo: REAL</span>
+            <button class="btn-modo" id="btn-cambiar-modo" onclick="alternarModo()">🧪 Entrar a Pruebas</button>
+            <button class="btn-modo" id="btn-actualizar" onclick="actualizarDatos()" style="background-color: #3b82f6;">🔄 Actualizar</button>
             <div class="estado-conexion" id="estado-conexion">Conectando...</div>
         </div>
 
@@ -469,8 +472,64 @@
         let alumnos = [];
         let historial = [];
         let guardando = false;
+        let datosListos = false;          // true solo cuando los datos se cargaron bien
+        let ultimoEstadoGuardado = null;  // copia del último estado confirmado (para deshacer si falla un guardado)
 
-        const hoy = new Date().toISOString().split('T')[0];
+        // ============================================
+        // UTILIDADES
+        // ============================================
+        // Fecha LOCAL (YYYY-MM-DD). toISOString() usa UTC y en la noche da el día siguiente.
+        function fechaLocalHoy() {
+            const d = new Date();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${d.getFullYear()}-${mm}-${dd}`;
+        }
+
+        // Escapa texto antes de meterlo en innerHTML
+        function esc(valor) {
+            return String(valor ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        const fmt = (n) => Number(n).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const r2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100; // evita errores de decimales
+
+        function leerLS(key, porDefecto) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw === null ? porDefecto : JSON.parse(raw);
+            } catch (e) {
+                return porDefecto;
+            }
+        }
+
+        function normalizarAlumnos(lista) {
+            return (Array.isArray(lista) ? lista : []).map(a => ({
+                nombre: String(a.nombre ?? ''),
+                abonado: Number(a.abonado) || 0,
+                copias: parseInt(a.copias, 10) || 0
+            }));
+        }
+
+        function tomarSnapshot() {
+            return JSON.stringify({ alumnos, historial, costoCopia });
+        }
+
+        function restaurarSnapshot() {
+            if (!ultimoEstadoGuardado) return;
+            const s = JSON.parse(ultimoEstadoGuardado);
+            alumnos = s.alumnos;
+            historial = s.historial;
+            costoCopia = s.costoCopia;
+            refrescarUI();
+        }
+
+        const hoy = fechaLocalHoy();
         document.getElementById('fecha-abono').value = hoy;
         document.getElementById('fecha-copia').value = hoy;
 
@@ -491,24 +550,56 @@
             el.className = 'estado-conexion ' + tipo;
         }
 
+        // Devuelve true si se puede operar; si no, avisa (cuando corresponde)
+        function puedeOperar() {
+            if (guardando) return false;
+            if (!esModoDemo && !datosListos) {
+                alert('Todavía no se han cargado los datos desde Google Sheets.\nToca "🔄 Actualizar" y vuelve a intentarlo.');
+                return false;
+            }
+            return true;
+        }
+
+        function refrescarUI() {
+            document.getElementById('input-costo-copia').value = costoCopia;
+            document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
+            document.getElementById('total-alumnos').textContent = alumnos.length;
+            renderizarAlumnos();
+            renderizarHistorial();
+        }
+
         // ============================================
         // COMUNICACIÓN CON GOOGLE APPS SCRIPT
         // ============================================
         async function llamarAPI(action, payload = null) {
             const url = SCRIPT_URL + '?action=' + encodeURIComponent(action);
 
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 25000);
+
             const options = {
                 method: payload ? 'POST' : 'GET',
-                redirect: 'follow'
+                redirect: 'follow',
+                signal: controller.signal
             };
 
             if (payload) {
                 options.body = JSON.stringify({ action, ...payload });
                 options.headers = { 'Content-Type': 'text/plain;charset=utf-8' }; // evita preflight CORS
+            } else {
+                options.cache = 'no-store';
             }
 
-            const response = await fetch(url, options);
-            const text = await response.text();
+            let text;
+            try {
+                const response = await fetch(url, options);
+                text = await response.text();
+            } catch (e) {
+                if (e.name === 'AbortError') throw new Error('El servidor tardó demasiado en responder.');
+                throw new Error(navigator.onLine ? 'No se pudo conectar con el servidor.' : 'Sin conexión a internet.');
+            } finally {
+                clearTimeout(timer);
+            }
 
             let data;
             try {
@@ -528,53 +619,49 @@
         // ============================================
         async function cargarDatosSegunModo() {
             mostrarCarga(true);
+            datosListos = false;
 
             try {
                 if (esModoDemo) {
                     // === MODO DEMO (localStorage) ===
                     setEstadoConexion('🧪 Modo prueba (datos locales)', 'ok');
 
-                    const keyAlumnos = 'control_copias_alumnos_DEMO';
-                    const keyHistorial = 'control_copias_historial_DEMO';
-                    const keyCosto = 'control_copias_costo_DEMO';
+                    costoCopia = parseFloat(localStorage.getItem('control_copias_costo_DEMO')) || 50;
+                    alumnos = normalizarAlumnos(leerLS('control_copias_alumnos_DEMO', []));
+                    historial = leerLS('control_copias_historial_DEMO', []);
+                    if (!Array.isArray(historial)) historial = [];
 
-                    costoCopia = parseFloat(localStorage.getItem(keyCosto)) || 50;
-                    alumnos = JSON.parse(localStorage.getItem(keyAlumnos)) || [];
-                    historial = JSON.parse(localStorage.getItem(keyHistorial)) || [];
+                    nombresIniciales.forEach(nombreOficial => {
+                        if (!alumnos.some(a => a.nombre === nombreOficial)) {
+                            alumnos.push({ nombre: nombreOficial, abonado: 0, copias: 0 });
+                        }
+                    });
 
-                    if (!alumnos || alumnos.length === 0) {
-                        alumnos = nombresIniciales.map(nombre => ({
-                            nombre: nombre,
-                            abonado: 0,
-                            copias: 0
-                        }));
-                    } else {
-                        // Asegurar que todos los nombres oficiales existan
-                        nombresIniciales.forEach(nombreOficial => {
-                            if (!alumnos.some(a => a.nombre === nombreOficial)) {
-                                alumnos.push({ nombre: nombreOficial, abonado: 0, copias: 0 });
-                            }
-                        });
-                    }
+                    datosListos = true;
                 } else {
                     // === MODO REAL (Google Sheets) ===
+                    // Se vacía primero para no mostrar datos de prueba mientras carga
+                    alumnos = [];
+                    historial = [];
                     setEstadoConexion('⏳ Cargando desde Google Sheets...', 'loading');
 
                     const data = await llamarAPI('getAll');
 
-                    costoCopia = data.costoCopia || 50;
-                    alumnos = data.alumnos || [];
-                    historial = data.historial || [];
+                    costoCopia = Number(data.costoCopia) || 50;
+                    alumnos = normalizarAlumnos(data.alumnos);
+                    historial = Array.isArray(data.historial) ? data.historial : [];
 
-                    // Si la hoja está vacía, inicializamos con la lista oficial
-                    if (!alumnos || alumnos.length === 0) {
-                        alumnos = nombresIniciales.map(nombre => ({
-                            nombre: nombre,
-                            abonado: 0,
-                            copias: 0
-                        }));
-                        // Guardamos la lista inicial
-                        await guardarDatos(true); // silent
+                    // Seguridad: hay historial pero ningún alumno = respuesta rara, no se toca nada
+                    if (alumnos.length === 0 && historial.length > 0) {
+                        throw new Error('La hoja devolvió historial pero ningún alumno. Por seguridad no se guardó nada.');
+                    }
+
+                    datosListos = true;
+
+                    if (alumnos.length === 0) {
+                        // Hoja realmente vacía: se inicializa con la lista oficial
+                        alumnos = nombresIniciales.map(nombre => ({ nombre, abonado: 0, copias: 0 }));
+                        await guardarDatos(true);
                     } else {
                         // Asegurar que no falte ningún alumno de la lista oficial
                         let faltan = false;
@@ -584,89 +671,91 @@
                                 faltan = true;
                             }
                         });
-                        if (faltan) {
-                            await guardarDatos(true);
-                        }
+                        if (faltan) await guardarDatos(true);
                     }
 
                     setEstadoConexion('🟢 Conectado a Google Sheets', 'ok');
                 }
 
-                // Actualizar UI
-                document.getElementById('input-costo-copia').value = costoCopia;
-                document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
-                document.getElementById('total-alumnos').textContent = alumnos.length;
-
+                ultimoEstadoGuardado = tomarSnapshot();
                 actualizarInterfazModo();
-                renderizarAlumnos();
-                renderizarHistorial();
+                refrescarUI();
                 inicializarSelects();
 
             } catch (err) {
                 console.error(err);
+                datosListos = false;
                 setEstadoConexion('❌ Error: ' + err.message, 'error');
-                alert('Error al cargar datos:\n' + err.message + '\n\nRevisa que el Apps Script esté desplegado correctamente y con acceso "Cualquier persona".');
+                actualizarInterfazModo();
+                refrescarUI();
+                inicializarSelects();
+                if (navigator.onLine) {
+                    alert('Error al cargar datos:\n' + err.message + '\n\nRevisa que el Apps Script esté desplegado correctamente y con acceso "Cualquier persona".');
+                }
             } finally {
                 mostrarCarga(false);
             }
         }
 
+        // Devuelve true si se guardó bien. Si falla (y no es silencioso), deshace el cambio en pantalla.
         async function guardarDatos(silencioso = false) {
-            if (guardando && !silencioso) return;
+            if (guardando && !silencioso) return false;
 
             if (!silencioso) mostrarCarga(true);
 
             try {
                 if (esModoDemo) {
-                    // Guardar en localStorage
                     localStorage.setItem('control_copias_alumnos_DEMO', JSON.stringify(alumnos));
                     localStorage.setItem('control_copias_historial_DEMO', JSON.stringify(historial));
                     localStorage.setItem('control_copias_costo_DEMO', costoCopia);
                 } else {
-                    // Guardar en Google Sheets
                     setEstadoConexion('⏳ Guardando en Google Sheets...', 'loading');
-                    await llamarAPI('saveAll', {
-                        alumnos: alumnos,
-                        historial: historial,
-                        costoCopia: costoCopia
-                    });
+                    await llamarAPI('saveAll', { alumnos, historial, costoCopia });
                     setEstadoConexion('🟢 Guardado correctamente', 'ok');
                 }
 
-                renderizarAlumnos();
-                renderizarHistorial();
+                ultimoEstadoGuardado = tomarSnapshot();
+                refrescarUI();
+                return true;
 
             } catch (err) {
                 console.error(err);
                 setEstadoConexion('❌ Error al guardar: ' + err.message, 'error');
                 if (!silencioso) {
-                    alert('Error al guardar:\n' + err.message);
+                    restaurarSnapshot(); // deshace el cambio para que pantalla y servidor coincidan
+                    alert('No se pudo guardar, así que el cambio se deshizo.\n\n' + err.message);
                 }
+                return false;
             } finally {
                 if (!silencioso) mostrarCarga(false);
             }
         }
 
+        function actualizarDatos() {
+            if (guardando) return;
+            cargarDatosSegunModo();
+        }
+
         // ============================================
         // PRECIO
         // ============================================
-        function fijarPrecio(nuevoPrecio) {
+        async function fijarPrecio(nuevoPrecio) {
+            if (!puedeOperar()) { document.getElementById('input-costo-copia').value = costoCopia; return; }
             costoCopia = nuevoPrecio;
-            document.getElementById('input-costo-copia').value = nuevoPrecio;
-            document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
-            guardarDatos();
+            await guardarDatos();
         }
 
-        function actualizarPrecioManual() {
-            let val = parseFloat(document.getElementById('input-costo-copia').value);
+        async function actualizarPrecioManual() {
+            const inp = document.getElementById('input-costo-copia');
+            const val = parseFloat(inp.value);
             if (isNaN(val) || val <= 0) {
                 alert('Ingrese un costo por copia válido.');
-                document.getElementById('input-costo-copia').value = costoCopia;
+                inp.value = costoCopia;
                 return;
             }
+            if (!puedeOperar()) { inp.value = costoCopia; return; }
             costoCopia = val;
-            document.getElementById('subtitulo-precio').textContent = `Costo actual por copia: ${costoCopia} Bs`;
-            guardarDatos();
+            await guardarDatos();
         }
 
         // ============================================
@@ -708,12 +797,12 @@
             selectCopia.innerHTML = '';
 
             alumnos.forEach((alumn, index) => {
-                let opt1 = document.createElement('option');
+                const opt1 = document.createElement('option');
                 opt1.value = index;
                 opt1.textContent = alumn.nombre;
                 selectAbono.appendChild(opt1);
 
-                let opt2 = document.createElement('option');
+                const opt2 = document.createElement('option');
                 opt2.value = index;
                 opt2.textContent = alumn.nombre;
                 selectCopia.appendChild(opt2);
@@ -731,16 +820,16 @@
             tbody.innerHTML = '';
 
             alumnos.forEach((alumn, index) => {
-                let gastado = alumn.copias * costoCopia;
-                let saldo = alumn.abonado - gastado;
+                const gastado = r2(alumn.copias * costoCopia);
+                const saldo = r2(alumn.abonado - gastado);
 
-                let tr = document.createElement('tr');
+                const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="text-align: left; font-weight: bold;">${alumn.nombre}</td>
-                    <td>${alumn.abonado.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
-                    <td>${alumn.copias}</td>
-                    <td>${gastado.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
-                    <td style="color: ${saldo < 0 ? '#ff6b6b' : '#10b981'}; font-weight: bold;">${saldo.toLocaleString('es-VE', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align: left; font-weight: bold;">${esc(alumn.nombre)}</td>
+                    <td>${fmt(alumn.abonado)}</td>
+                    <td>${esc(alumn.copias)}</td>
+                    <td>${fmt(gastado)}</td>
+                    <td style="color: ${saldo < 0 ? '#ff6b6b' : '#10b981'}; font-weight: bold;">${fmt(saldo)}</td>
                     <td class="columna-acciones">
                         <button class="btn-accion btn-editar" onclick="editarAlumno(${index})">✏️</button>
                     </td>
@@ -759,14 +848,14 @@
             }
 
             [...historial].reverse().forEach((item, indexReal) => {
-                let realIdx = historial.length - 1 - indexReal;
-                let tr = document.createElement('tr');
+                const realIdx = historial.length - 1 - indexReal;
+                const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${item.fecha}</td>
-                    <td><span style="background: ${item.tipo === 'Abono' ? '#d1fae5' : '#ede9fe'}; padding: 2px 4px; border-radius: 3px; font-weight: bold;">${item.tipo}</span></td>
-                    <td style="font-weight: bold; text-align: left;">${item.detalle}</td>
-                    <td style="text-align: left; color: #555;">${item.descripcion || '-'}</td>
-                    <td>${item.valor}</td>
+                    <td>${esc(item.fecha)}</td>
+                    <td><span style="background: ${item.tipo === 'Abono' ? '#d1fae5' : '#ede9fe'}; padding: 2px 4px; border-radius: 3px; font-weight: bold;">${esc(item.tipo)}</span></td>
+                    <td style="font-weight: bold; text-align: left;">${esc(item.detalle)}</td>
+                    <td style="text-align: left; color: #555;">${esc(item.descripcion || '-')}</td>
+                    <td>${esc(item.valor)}</td>
                     <td class="columna-borrar">
                         <button class="btn-accion btn-borrar-historial" onclick="borrarMovimiento(${realIdx})">X</button>
                     </td>
@@ -779,45 +868,51 @@
         // ACCIONES PRINCIPALES
         // ============================================
         async function registrarAbono() {
-            if (guardando) return;
+            if (!puedeOperar()) return;
 
-            const index = document.getElementById('select-abono').value;
+            const index = parseInt(document.getElementById('select-abono').value, 10);
             const fecha = document.getElementById('fecha-abono').value;
             const monto = parseFloat(document.getElementById('input-abono').value);
             const desc = document.getElementById('desc-abono').value.trim();
 
+            if (isNaN(index) || !alumnos[index]) { alert('Seleccione un estudiante.'); return; }
             if (!fecha) { alert('Seleccione una fecha.'); return; }
             if (isNaN(monto) || monto <= 0) { alert('Ingrese un monto válido.'); return; }
 
-            alumnos[index].abonado += monto;
+            alumnos[index].abonado = r2(alumnos[index].abonado + monto);
             historial.push({
                 fecha: fecha,
                 tipo: 'Abono',
                 detalle: alumnos[index].nombre,
                 descripcion: desc || 'Abono',
-                valor: `+${monto.toLocaleString('es-VE', {minimumFractionDigits: 2})}`
+                valor: `+${fmt(monto)}`
             });
 
-            document.getElementById('input-abono').value = '';
-            document.getElementById('desc-abono').value = '';
-
-            await guardarDatos();
-            alert('¡Abono registrado! 🎉');
+            const ok = await guardarDatos();
+            if (ok) {
+                document.getElementById('input-abono').value = '';
+                document.getElementById('desc-abono').value = '';
+                alert('¡Abono registrado! 🎉');
+            }
         }
 
         async function registrarCopias() {
-            if (guardando) return;
+            if (!puedeOperar()) return;
 
             const tipo = document.getElementById('tipo-copia').value;
             const fecha = document.getElementById('fecha-copia').value;
-            const cant = parseInt(document.getElementById('input-copia').value);
+            const cant = parseInt(document.getElementById('input-copia').value, 10);
             const desc = document.getElementById('desc-copia').value.trim();
 
             if (!fecha) { alert('Seleccione una fecha.'); return; }
             if (isNaN(cant) || cant <= 0) { alert('Ingrese una cantidad válida.'); return; }
 
+            let mensaje;
+
             if (tipo === 'individual') {
-                const index = document.getElementById('select-copia').value;
+                const index = parseInt(document.getElementById('select-copia').value, 10);
+                if (isNaN(index) || !alumnos[index]) { alert('Seleccione un estudiante.'); return; }
+
                 alumnos[index].copias += cant;
                 historial.push({
                     fecha: fecha,
@@ -826,11 +921,9 @@
                     descripcion: desc || 'Copias',
                     valor: `${cant} c.`
                 });
-                alert(`¡Listo! Se sumaron ${cant} copias a ${alumnos[index].nombre}.`);
+                mensaje = `¡Listo! Se sumaron ${cant} copias a ${alumnos[index].nombre}.`;
             } else {
-                alumnos.forEach(alumn => {
-                    alumn.copias += cant;
-                });
+                alumnos.forEach(alumn => { alumn.copias += cant; });
                 historial.push({
                     fecha: fecha,
                     tipo: 'Masivo',
@@ -838,49 +931,118 @@
                     descripcion: desc || 'Copias generales',
                     valor: `${cant} c/u`
                 });
-                alert(`¡Listo! Se sumaron ${cant} copias a todo el salón.`);
+                mensaje = `¡Listo! Se sumaron ${cant} copias a todo el salón.`;
             }
 
-            document.getElementById('input-copia').value = '1';
-            document.getElementById('desc-copia').value = '';
-
-            await guardarDatos();
+            const ok = await guardarDatos();
+            if (ok) {
+                document.getElementById('input-copia').value = '1';
+                document.getElementById('desc-copia').value = '';
+                alert(mensaje);
+            }
         }
 
         async function editarAlumno(index) {
-            if (guardando) return;
+            if (!puedeOperar()) return;
 
-            let alumno = alumnos[index];
-            let nuevoAbono = prompt(`Corregir ABONADO para ${alumno.nombre}:`, alumno.abonado);
+            const alumno = alumnos[index];
+            if (!alumno) return;
+
+            const nuevoAbono = prompt(`Corregir ABONADO para ${alumno.nombre}:`, alumno.abonado);
             if (nuevoAbono === null) return;
-            let nuevasCopias = prompt(`Corregir COPIAS para ${alumno.nombre}:`, alumno.copias);
+            const nuevasCopias = prompt(`Corregir COPIAS para ${alumno.nombre}:`, alumno.copias);
             if (nuevasCopias === null) return;
 
-            let abonadoParsed = parseFloat(nuevoAbono);
-            let copiasParsed = parseInt(nuevasCopias);
+            const abonadoTxt = nuevoAbono.trim().replace(',', '.');
+            const copiasTxt = nuevasCopias.trim();
+            const abonadoParsed = Number(abonadoTxt);
+            const copiasParsed = Number(copiasTxt);
 
-            if (isNaN(abonadoParsed) || isNaN(copiasParsed)) {
-                alert('Introduzca números válidos.');
+            if (abonadoTxt === '' || copiasTxt === '' || !isFinite(abonadoParsed) || !Number.isInteger(copiasParsed) || copiasParsed < 0) {
+                alert('Introduzca números válidos (las copias deben ser un número entero, 0 o mayor).');
                 return;
             }
 
-            alumnos[index].abonado = abonadoParsed;
-            alumnos[index].copias = copiasParsed;
+            alumno.abonado = r2(abonadoParsed);
+            alumno.copias = copiasParsed;
 
-            await guardarDatos();
-            alert(`¡Datos corregidos para ${alumno.nombre}! ✨`);
+            const ok = await guardarDatos();
+            if (ok) alert(`¡Datos corregidos para ${alumno.nombre}! ✨`);
+        }
+
+        // --- Borrar movimiento del historial (con opción de revertir saldos) ---
+        function parsearValorHistorial(item) {
+            const v = item.valor;
+            if (typeof v === 'number') return v;
+            let s = String(v ?? '').trim().replace(/^\+/, '');
+
+            if (item.tipo === 'Abono') {
+                s = s.replace(/[^\d.,-]/g, '');
+                if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+                const n = parseFloat(s);
+                return isNaN(n) ? null : n;
+            }
+            const m = s.match(/^(\d+)/);
+            return m ? parseInt(m[1], 10) : null;
+        }
+
+        function calcularReversion(item) {
+            const valor = parsearValorHistorial(item);
+            if (valor === null || !(valor > 0)) return null;
+
+            if (item.tipo === 'Abono') {
+                const al = alumnos.find(a => a.nombre === item.detalle);
+                if (!al) return null;
+                return {
+                    texto: `Se restarán ${fmt(valor)} Bs del abonado de ${al.nombre}.`,
+                    aplicar: () => { al.abonado = r2(al.abonado - valor); }
+                };
+            }
+            if (item.tipo === 'Copia') {
+                const al = alumnos.find(a => a.nombre === item.detalle);
+                if (!al) return null;
+                return {
+                    texto: `Se restarán ${valor} copias a ${al.nombre}.`,
+                    aplicar: () => { al.copias = Math.max(0, al.copias - valor); }
+                };
+            }
+            if (item.tipo === 'Masivo') {
+                return {
+                    texto: `Se restarán ${valor} copias a cada uno de los ${alumnos.length} alumnos.`,
+                    aplicar: () => { alumnos.forEach(a => { a.copias = Math.max(0, a.copias - valor); }); }
+                };
+            }
+            return null;
         }
 
         async function borrarMovimiento(index) {
-            if (guardando) return;
-            if (!confirm('¿Eliminar este registro del historial?')) return;
+            if (!puedeOperar()) return;
 
+            const item = historial[index];
+            if (!item) return;
+
+            const rev = calcularReversion(item);
+            let revertir = false;
+
+            if (rev) {
+                revertir = confirm(
+                    '¿Eliminar este registro Y revertirlo?\n\n' + rev.texto +
+                    '\n\nAceptar = eliminar y ajustar saldos\nCancelar = ver otras opciones'
+                );
+                if (!revertir) {
+                    if (!confirm('¿Eliminar SOLO del historial, sin cambiar saldos ni copias?')) return;
+                }
+            } else {
+                if (!confirm('¿Eliminar este registro del historial?\n(No se pudo calcular el ajuste, los saldos no cambiarán.)')) return;
+            }
+
+            if (revertir) rev.aplicar();
             historial.splice(index, 1);
             await guardarDatos();
         }
 
         async function reiniciarTodo() {
-            if (guardando) return;
+            if (!puedeOperar()) return;
             if (!confirm('⚠️ ¿ESTÁS SEGURA?\nSe borrarán los datos de esta sección.')) return;
 
             if (esModoDemo) {
@@ -889,14 +1051,22 @@
                 localStorage.removeItem('control_copias_costo_DEMO');
                 await cargarDatosSegunModo();
             } else {
+                const clave = prompt('Estás a punto de borrar los DATOS REALES de Google Sheets.\nPara confirmar escribe: BORRAR');
+                if (clave === null || clave.trim().toUpperCase() !== 'BORRAR') {
+                    alert('Cancelado. No se borró nada.');
+                    return;
+                }
                 try {
                     mostrarCarga(true);
                     setEstadoConexion('⏳ Reiniciando en Google Sheets...', 'loading');
-                    await llamarAPI('reiniciar');
+                    // POST (no GET): una acción que borra datos no debe poder dispararse con solo abrir un enlace
+                    await llamarAPI('reiniciar', {});
+                    mostrarCarga(false);
                     await cargarDatosSegunModo();
                 } catch (err) {
                     alert('Error al reiniciar: ' + err.message);
                     mostrarCarga(false);
+                    setEstadoConexion('❌ Error al reiniciar: ' + err.message, 'error');
                 }
             }
         }
@@ -905,6 +1075,11 @@
         // INICIO + PWA
         // ============================================
         cargarDatosSegunModo();
+
+        // Si vuelve el internet y los datos no se habían podido cargar, reintenta solo
+        window.addEventListener('online', () => {
+            if (!esModoDemo && !datosListos && !guardando) cargarDatosSegunModo();
+        });
 
         // Registrar Service Worker
         if ('serviceWorker' in navigator) {
